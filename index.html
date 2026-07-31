@@ -291,19 +291,28 @@
     <div class="field"><label>과업 내용</label><textarea id="c_task" placeholder="주요 과업 요약"></textarea></div>
     <div class="field">
       <label>계약서 파일</label>
-      <input type="file" id="c_file_contract">
+      <div style="display:flex; gap:8px; align-items:center;">
+        <input type="file" id="c_file_contract" style="flex:1;">
+        <button type="button" class="icon-btn del" onclick="clearFileInput('c_file_contract')">✕ 선택취소</button>
+      </div>
       <div class="filerow" id="c_file_contract_current"></div>
       <input id="c_link_contract" placeholder="또는 링크 (원드라이브 등) 직접 입력" style="margin-top:8px;">
     </div>
     <div class="field">
       <label>세금계산서 파일</label>
-      <input type="file" id="c_file_tax">
+      <div style="display:flex; gap:8px; align-items:center;">
+        <input type="file" id="c_file_tax" style="flex:1;">
+        <button type="button" class="icon-btn del" onclick="clearFileInput('c_file_tax')">✕ 선택취소</button>
+      </div>
       <div class="filerow" id="c_file_tax_current"></div>
       <input id="c_link_tax" placeholder="또는 링크 (원드라이브 등) 직접 입력" style="margin-top:8px;">
     </div>
     <div class="field">
       <label>실적증명서 파일</label>
-      <input type="file" id="c_file_cert">
+      <div style="display:flex; gap:8px; align-items:center;">
+        <input type="file" id="c_file_cert" style="flex:1;">
+        <button type="button" class="icon-btn del" onclick="clearFileInput('c_file_cert')">✕ 선택취소</button>
+      </div>
       <div class="filerow" id="c_file_cert_current"></div>
       <input id="c_link_cert" placeholder="또는 링크 (원드라이브 등) 직접 입력" style="margin-top:8px;">
       <div class="hint">파일 업로드와 링크, 둘 다 넣어도 되고 하나만 넣어도 돼요. 파일이 크면 링크를 추천해요.</div>
@@ -1899,6 +1908,11 @@ async function deleteItemFromFirestore(tabKey, id){
 // ---- 첨부파일 blob 전용 저장소 (문서 하나당 파일 하나, 텍스트와 완전 분리) ----
 function fileDocId(itemId, slot){ return itemId + '__' + slot; }
 
+function clearFileInput(inputId){
+  const input = document.getElementById(inputId);
+  if(input) input.value = '';
+}
+
 async function saveFileBlob(itemId, slot, fileData){
   try{
     await db.collection('files').doc(fileDocId(itemId, slot)).set({
@@ -1907,7 +1921,7 @@ async function saveFileBlob(itemId, slot, fileData){
     return true;
   }catch(e){
     console.error('첨부파일 저장 실패', e);
-    alert('첨부파일 저장 실패: 파일이 너무 크거나(1MB 제한) 네트워크 문제예요.\n' + e.message);
+    alert('첨부파일 저장 실패: 파일이 너무 크거나(1MB 제한) 네트워크 문제예요.\n"✕ 선택취소" 버튼으로 파일을 지우고 링크로 대신 넣거나, 더 작은 파일로 다시 선택해주세요.\n(다른 입력 내용은 그대로 남아있어요.)\n' + e.message);
     return false;
   }
 }
@@ -3912,9 +3926,25 @@ async function downloadFile(itemId, slot){
 function formatAmountInput(el){
   let raw = el.value;
   if(/[억만]/.test(raw)) return; // 억/만 단위로 직접 쓰신 경우는 그대로 둠
+
+  const cursorPos = el.selectionStart;
+  const beforeCursor = raw.slice(0, cursorPos);
+  const digitsBeforeCursor = (beforeCursor.match(/\d/g) || []).length;
+
   let digits = raw.replace(/[^\d]/g,'');
   if(!digits){ el.value=''; return; }
-  el.value = Number(digits).toLocaleString('ko-KR') + '원';
+
+  const formatted = Number(digits).toLocaleString('ko-KR');
+  el.value = formatted + '원';
+
+  // 숫자 개수 기준으로 커서를 원래 위치에 맞게 복원 (콤마 삽입 위치 보정)
+  let newPos = formatted.length;
+  let digitCount = 0;
+  for(let i=0; i<formatted.length; i++){
+    if(digitCount >= digitsBeforeCursor){ newPos = i; break; }
+    if(/\d/.test(formatted[i])) digitCount++;
+  }
+  el.setSelectionRange(newPos, newPos);
 }
 
 function parseAmount(str){
