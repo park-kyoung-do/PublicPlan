@@ -218,9 +218,9 @@
     <button class="tab-btn" data-tab="lease" data-cat="ibagu_cat" onclick="setTab('lease')">📜 임대차계약서</button>
     <button class="tab-btn" data-tab="renewal" data-cat="ibagu_cat" onclick="setTab('renewal')">📝 입주계약연장신청서</button>
     <button class="tab-btn" data-tab="subdelegation" data-cat="ibagu_cat" onclick="setTab('subdelegation')">🔑 제3자 재위탁 승인요청</button>
-    <button class="tab-btn" data-tab="instructors" data-cat="hame_cat" onclick="setTab('instructors')">👨‍🏫 강사 관리</button>
     <button class="tab-btn" data-tab="receipts" data-cat="hame_cat" onclick="setTab('receipts')">🧾 강사 영수증(교육청)</button>
     <button class="tab-btn" data-tab="salaryReceipts" data-cat="hame_cat" onclick="setTab('salaryReceipts')">🧾 강사 영수증(월급)</button>
+    <button class="tab-btn" data-tab="instructors" data-cat="hame_cat" onclick="setTab('instructors')">👨‍🏫 강사 관리</button>
     <button class="tab-btn" data-tab="buildings" data-cat="ibagu_cat" onclick="setTab('buildings')">🏢 건물 관리</button>
     <button class="tab-btn" data-tab="tenants" data-cat="ibagu_cat" onclick="setTab('tenants')">🧑 입주자 관리</button>
   </div>
@@ -787,6 +787,9 @@
   <div class="modal" style="max-width:640px;">
     <h2>👤 직원 정보 관리</h2>
     <div class="hint" style="margin-bottom:14px;">여기 등록해두면, 재직증명서 발급할 때 이름만 선택해서 바로 쓸 수 있어요.</div>
+    <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:var(--ink); margin-bottom:10px;">
+      <input type="checkbox" id="emp_hideResigned" checked onchange="renderEmployeeList()" style="width:auto;"> 퇴사자 숨기기
+    </label>
     <div id="employeeList" style="display:flex; flex-direction:column; gap:10px; max-height:320px; overflow-y:auto; margin-bottom:18px;"></div>
     <div style="border-top:1px solid var(--line); padding-top:16px;">
       <input type="hidden" id="emp_editId">
@@ -889,9 +892,9 @@
         <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="lease" style="width:auto;"> 📜 임대차계약서</label>
         <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="renewal" style="width:auto;"> 📝 입주계약연장신청서</label>
         <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="subdelegation" style="width:auto;"> 🔑 제3자 재위탁 승인요청</label>
-        <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="instructors" style="width:auto;"> 👨‍🏫 강사 관리</label>
         <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="receipts" style="width:auto;"> 🧾 강사 영수증(교육청)</label>
         <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="salaryReceipts" style="width:auto;"> 🧾 강사 영수증(월급)</label>
+        <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="instructors" style="width:auto;"> 👨‍🏫 강사 관리</label>
         <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="leave" style="width:auto;"> 🏖 연차 관리</label>
         <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="comp" style="width:auto;"> 🔄 대체휴무 관리</label>
         <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="workGP" style="width:auto;"> 🗓 빈시간(공공플랜)</label>
@@ -959,7 +962,7 @@ const TAB_CATEGORY_MAP = {
   employ:'issue_cat', official:'issue_cat',
   leave:'hr_cat', comp:'hr_cat', workGP:'hr_cat', workHM:'hr_cat', employees:'hr_cat',
   movein:'ibagu_cat', lease:'ibagu_cat', renewal:'ibagu_cat', buildings:'ibagu_cat', tenants:'ibagu_cat', subdelegation:'ibagu_cat',
-  instructors:'hame_cat', receipts:'hame_cat', salaryReceipts:'hame_cat'
+  receipts:'hame_cat', salaryReceipts:'hame_cat', instructors:'hame_cat'
 };
 
 function setCategory(cat){
@@ -1152,16 +1155,17 @@ function getSelectedEmployeeSet(tab){
   if(!selectedEmployeeIdsByTab[tab]){
     if(tab === 'comp'){
       selectedEmployeeIdsByTab[tab] = new Set(
-        data.employees.filter(e => !COMP_DEFAULT_EXCLUDE.includes(e.name)).map(e=>e.id)
+        data.employees.filter(e => !COMP_DEFAULT_EXCLUDE.includes(e.name) && !e.endDate).map(e=>e.id)
       );
     } else {
-      selectedEmployeeIdsByTab[tab] = new Set(data.employees.map(e=>e.id));
+      selectedEmployeeIdsByTab[tab] = new Set(data.employees.filter(e => !e.endDate).map(e=>e.id));
     }
   }
   const known = knownEmployeeIdsByTab[tab];
   data.employees.forEach(e => {
     if(!known.has(e.id)){
       known.add(e.id);
+      if(e.endDate) return; // 퇴사자는 기본 제외 (연차/대체휴무 관리)
       if(tab === 'comp' && COMP_DEFAULT_EXCLUDE.includes(e.name)) return; // 신규 등록이라도 기본 제외 대상은 제외
       selectedEmployeeIdsByTab[tab].add(e.id);
     }
@@ -4234,11 +4238,13 @@ function openEmployeeManager(){
 function renderEmployeeList(){
   const el = document.getElementById('employeeList');
   if(!el) return;
-  if(data.employees.length===0){
-    el.innerHTML = '<div class="empty" style="padding:20px;">등록된 직원이 없습니다.</div>';
+  const hideResigned = document.getElementById('emp_hideResigned').checked;
+  const list = hideResigned ? data.employees.filter(e => !e.endDate) : data.employees.slice();
+  if(list.length===0){
+    el.innerHTML = `<div class="empty" style="padding:20px;">${hideResigned && data.employees.length>0 ? '재직중인 직원이 없습니다. (퇴사자 숨기기 해제하면 볼 수 있어요)' : '등록된 직원이 없습니다.'}</div>`;
     return;
   }
-  el.innerHTML = data.employees.map(e => `
+  el.innerHTML = list.map(e => `
     <div style="display:flex; justify-content:space-between; align-items:center; border:1px solid var(--line); border-radius:4px; padding:12px 14px;">
       <div style="display:flex; align-items:center; gap:10px;">
         <input type="checkbox" ${e.allowIssue?'checked':''} onchange="toggleAllowIssue('${e.id}', this.checked)" title="발급 허용" style="width:auto;">
