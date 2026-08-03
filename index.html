@@ -72,6 +72,13 @@
   }
   .chip.active{ background:var(--navy); color:var(--paper); border-color:var(--navy); }
 
+  .month-group{ max-width:1200px; margin:0 auto; padding:0 32px; }
+  .month-group-heading{
+    font-size:15px; font-weight:700; color:var(--navy); margin:20px 0 10px;
+    padding-bottom:6px; border-bottom:2px solid var(--navy);
+  }
+  .month-group .grid{ padding:0 0 12px; }
+
   .grid{
     max-width:1200px; margin:0 auto; padding:20px 32px 80px;
     display:grid; grid-template-columns:repeat(auto-fill, minmax(270px,1fr)); gap:16px;
@@ -194,6 +201,7 @@
     <button class="tab-btn" data-cat="issue_cat" onclick="setCategory('issue_cat')">🖨 서류 발급기</button>
     <button class="tab-btn" data-cat="hr_cat" onclick="setCategory('hr_cat')">👥 인사 관리</button>
     <button class="tab-btn" data-cat="ibagu_cat" onclick="setCategory('ibagu_cat')">🏙 이바구플랫폼</button>
+    <button class="tab-btn" data-cat="hame_cat" onclick="setCategory('hame_cat')">🛠 해메체</button>
   </div>
   <div class="tabs" id="tabsBar" style="border-top:1px solid rgba(247,244,236,0.12);">
     <button class="tab-btn active" data-tab="contract" data-cat="docs_cat" onclick="setTab('contract')">📄 계약서</button>
@@ -210,6 +218,9 @@
     <button class="tab-btn" data-tab="lease" data-cat="ibagu_cat" onclick="setTab('lease')">📜 임대차계약서</button>
     <button class="tab-btn" data-tab="renewal" data-cat="ibagu_cat" onclick="setTab('renewal')">📝 입주계약연장신청서</button>
     <button class="tab-btn" data-tab="subdelegation" data-cat="ibagu_cat" onclick="setTab('subdelegation')">🔑 제3자 재위탁 승인요청</button>
+    <button class="tab-btn" data-tab="instructors" data-cat="hame_cat" onclick="setTab('instructors')">👨‍🏫 강사 관리</button>
+    <button class="tab-btn" data-tab="receipts" data-cat="hame_cat" onclick="setTab('receipts')">🧾 강사 영수증(교육청)</button>
+    <button class="tab-btn" data-tab="salaryReceipts" data-cat="hame_cat" onclick="setTab('salaryReceipts')">🧾 강사 영수증(월급)</button>
     <button class="tab-btn" data-tab="buildings" data-cat="ibagu_cat" onclick="setTab('buildings')">🏢 건물 관리</button>
     <button class="tab-btn" data-tab="tenants" data-cat="ibagu_cat" onclick="setTab('tenants')">🧑 입주자 관리</button>
   </div>
@@ -231,6 +242,7 @@
   <input class="search" id="searchInput" placeholder="검색..." oninput="render()">
   <button class="btn" id="addBtn" onclick="handleAddClick()">+ 새 항목 추가</button>
   <button class="btn secondary" id="bulkEmployBtn" onclick="openBulkEmploy()" style="display:none;">📑 일괄 발급</button>
+  <button class="btn secondary" id="bulkReceiptBtn" onclick="printBulkReceipts()" style="display:none;">🧾 영수증 일괄 다운로드 (현재 필터 기준)</button>
   <select id="sortSelect" onchange="render()"></select>
   <div class="amount-filter" id="amountFilterBox" style="display:flex;">
     <label>최소금액(백만원)</label>
@@ -253,6 +265,10 @@
     <span id="workWeekLabel" style="font-size:13px; color:var(--navy); font-weight:600; padding:0 6px;"></span>
     <button class="btn secondary" style="padding:9px 12px; font-size:13px;" onclick="moveWorkWeek(1)">다음주 ▶</button>
     <button class="btn" style="padding:9px 14px; font-size:13px;" onclick="fetchWorkEvents()">🔄 불러오기</button>
+  </div>
+  <div class="amount-filter" id="receiptMonthBox" style="display:none;">
+    <label>월</label>
+    <select id="receiptMonthSelect" onchange="render()"></select>
   </div>
 </div>
 
@@ -478,6 +494,84 @@
     <div class="modal-actions">
       <button class="btn secondary" onclick="closeModal('tenants')">취소</button>
       <button class="btn" id="tn_saveBtn" onclick="saveTenant()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 강사 관리 모달 ===== -->
+<div class="overlay" id="overlay-instructors">
+  <div class="modal">
+    <h2 id="modalTitle-instructors">강사 추가</h2>
+    <input type="hidden" id="in_editId">
+    <div class="field"><label>주제</label><input id="in_subject" placeholder="예: 베이킹, 3D프린팅, AI코딩"></div>
+    <div class="field"><label>성명</label><input id="in_name" placeholder="예: OOO"></div>
+    <div class="field"><label>주민번호</label><input id="in_rrn" placeholder="예: 000000-0000000"></div>
+    <div class="field"><label>주소</label><input id="in_address" placeholder="예: 부산광역시 OOOO"></div>
+    <div class="field"><label>소속</label><input id="in_affiliation" placeholder="예: OOO협회, 프리랜서"></div>
+    <div class="field"><label>직위/직급</label><input id="in_position" placeholder="예: 강사, 팀장"></div>
+    <div class="field"><label>연락처</label><input id="in_contact" placeholder="예: 000-0000-0000"></div>
+    <div class="field"><label>계좌번호(은행)</label><input id="in_bankInfo" placeholder="예: 국민은행 000-00-0000000"></div>
+    <div class="field"><label>월급 (선택, 강사 영수증(월급) 발급 시 자동 반영)</label><input id="in_salary" placeholder="예: 2,400,000원" oninput="formatAmountInput(this)"></div>
+    <div class="field">
+      <label>도장 파일</label>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <input type="file" id="in_sealFile" accept="image/*" style="flex:1;">
+        <button type="button" class="icon-btn del" onclick="clearFileInput('in_sealFile')">✕ 선택취소</button>
+      </div>
+      <div class="filerow" id="in_seal_current"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeModal('instructors')">취소</button>
+      <button class="btn" id="in_saveBtn" onclick="saveInstructor()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 강사 영수증 모달 ===== -->
+<div class="overlay" id="overlay-receipts">
+  <div class="modal">
+    <h2 id="modalTitle-receipts">강사 영수증(교육청) 작성</h2>
+    <input type="hidden" id="rc_editId">
+    <div class="field">
+      <label>선생님 선택</label>
+      <select id="rc_instructorSelect" onchange="applyReceiptInstructor()"><option value="">선택하세요</option></select>
+    </div>
+    <div class="field"><label>주제 (건명: 해운대메이커센터 OO 수업)</label><input id="rc_subject" placeholder="예: 목공"></div>
+    <div class="field"><label>금액</label><input id="rc_amount" placeholder="예: 2,400,000원" oninput="formatAmountInput(this); updateReceiptPreview();"></div>
+    <div class="field"><label>발행일자</label><input type="date" id="rc_issueDate" min="1900-01-01" max="2099-12-31" onchange="updateReceiptPreview()"></div>
+    <div class="field">
+      <label>난이도 (문서에는 표시 안 됨, 필터용)</label>
+      <select id="rc_level">
+        <option value="">미지정</option>
+        <option value="기초">기초</option>
+        <option value="초급">초급</option>
+        <option value="중급">중급</option>
+        <option value="고급">고급</option>
+      </select>
+    </div>
+    <div class="field"><label>번호</label><input id="rc_receiptNo" placeholder="자동 생성됨 (직접 수정 가능)"></div>
+    <div class="field" id="rc_previewBox" style="background:var(--paper-2); border-radius:6px; padding:12px 14px; font-size:13px; line-height:1.8;"></div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeModal('receipts')">취소</button>
+      <button class="btn secondary" id="rc_saveOnlyBtn" onclick="saveReceipt(false)">저장</button>
+      <button class="btn" id="rc_saveBtn" onclick="saveReceipt(true)">저장 및 발급</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 강사 영수증(월급) 일괄발급 모달 ===== -->
+<div class="overlay" id="overlay-salaryReceipts">
+  <div class="modal">
+    <h2>강사 영수증(월급) 일괄 발급</h2>
+    <div class="hint" style="margin-bottom:14px;">강사 관리에 등록된 월급이 자동으로 반영돼요. 발급할 선생님을 체크한 뒤 일괄 발급하세요.</div>
+    <div class="field"><label>발행월</label><input type="date" id="sr_issueDate" min="1900-01-01" max="2099-12-31"></div>
+    <div class="field">
+      <label>선생님 선택 (월급 미등록 강사는 목록에 안 나와요)</label>
+      <div id="sr_instructorList" style="display:flex; flex-direction:column; gap:8px; max-height:320px; overflow-y:auto; border:1px solid var(--line); border-radius:4px; padding:10px;"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeModal('salaryReceipts')">취소</button>
+      <button class="btn" id="sr_issueBtn" onclick="issueSalaryReceiptsBulk()">✅ 체크한 선생님 일괄 발급</button>
     </div>
   </div>
 </div>
@@ -712,6 +806,16 @@
           <option value="해메체">해메체</option>
         </select>
       </div>
+      <div class="field"><label>연락처 (선택, 강사비 영수증 발급용)</label><input id="emp_contact" placeholder="예: 010-0000-0000"></div>
+      <div class="field"><label>계좌번호(은행) (선택, 강사비 영수증 발급용)</label><input id="emp_bankInfo" placeholder="예: 국민은행 000-00-0000000"></div>
+      <div class="field">
+        <label>도장 파일 (선택, 강사비 영수증 발급용)</label>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <input type="file" id="emp_sealFile" accept="image/*" style="flex:1;">
+          <button type="button" class="icon-btn del" onclick="clearFileInput('emp_sealFile')">✕ 선택취소</button>
+        </div>
+        <div class="filerow" id="emp_seal_current"></div>
+      </div>
       <div class="field">
         <label style="display:flex; align-items:center; gap:8px; font-size:14px; color:var(--ink);">
           <input type="checkbox" id="emp_allowIssue" style="width:auto;"> 뷰어 발급 허용 (체크한 직원만 재직증명서 발급 목록에 뜸)
@@ -724,6 +828,26 @@
     </div>
     <div class="modal-actions">
       <button class="btn secondary" onclick="closeModal('employees')">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 직원 강사비 영수증 발급 모달 ===== -->
+<div class="overlay" id="overlay-empReceipt">
+  <div class="modal">
+    <h2 id="modalTitle-empReceipt">강사비 영수증 발급</h2>
+    <div class="hint" style="margin-bottom:14px;" id="er_who"></div>
+    <input type="hidden" id="er_employeeId">
+    <input type="hidden" id="er_editId">
+    <div class="field"><label>주제 (건명: 해운대메이커센터 OO 수업)</label><input id="er_subject" placeholder="예: 목공"></div>
+    <div class="field"><label>금액</label><input id="er_amount" placeholder="예: 2,400,000원" oninput="formatAmountInput(this); updateEmpReceiptPreview();"></div>
+    <div class="field"><label>발행일자</label><input type="date" id="er_issueDate" min="1900-01-01" max="2099-12-31"></div>
+    <div class="field"><label>번호</label><input id="er_receiptNo" placeholder="자동 생성됨 (직접 수정 가능)"></div>
+    <div class="field" id="er_previewBox" style="background:var(--paper-2); border-radius:6px; padding:12px 14px; font-size:13px; line-height:1.8;"></div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeModal('empReceipt')">취소</button>
+      <button class="btn secondary" id="er_saveOnlyBtn" onclick="saveEmpReceipt(false)">저장</button>
+      <button class="btn" id="er_saveBtn" onclick="saveEmpReceipt(true)">저장 및 발급</button>
     </div>
   </div>
 </div>
@@ -765,6 +889,9 @@
         <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="lease" style="width:auto;"> 📜 임대차계약서</label>
         <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="renewal" style="width:auto;"> 📝 입주계약연장신청서</label>
         <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="subdelegation" style="width:auto;"> 🔑 제3자 재위탁 승인요청</label>
+        <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="instructors" style="width:auto;"> 👨‍🏫 강사 관리</label>
+        <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="receipts" style="width:auto;"> 🧾 강사 영수증(교육청)</label>
+        <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="salaryReceipts" style="width:auto;"> 🧾 강사 영수증(월급)</label>
         <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="leave" style="width:auto;"> 🏖 연차 관리</label>
         <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="comp" style="width:auto;"> 🔄 대체휴무 관리</label>
         <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="workGP" style="width:auto;"> 🗓 빈시간(공공플랜)</label>
@@ -823,15 +950,16 @@
 </div>
 
 <script>
-const KEYS = { contract:'gongplan_contracts_v1', docs:'gongplan_docs_v1', cert:'gongplan_certs_v1', employ:'gongplan_employ_v1', employees:'gongplan_employees_v1', official:'gongplan_official_v1', buildings:'gongplan_buildings_v1', lease:'gongplan_lease_v1', renewal:'gongplan_renewal_v1', tenants:'gongplan_tenants_v1', subdelegation:'gongplan_subdelegation_v1', movein:'gongplan_movein_v1' };
-let data = { contract:[], docs:[], cert:[], employ:[], employees:[], official:[], buildings:[], lease:[], renewal:[], tenants:[], subdelegation:[], movein:[], settings:{ viewerMode:false, allowedTabs:['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein'], company:{ name:'', ceo:'', address:'', bizNumber:'', issuerName:'', issuerPosition:'', hasSeal:false, hasLogo:false, hasLogo2:false } } };
+const KEYS = { contract:'gongplan_contracts_v1', docs:'gongplan_docs_v1', cert:'gongplan_certs_v1', employ:'gongplan_employ_v1', employees:'gongplan_employees_v1', official:'gongplan_official_v1', buildings:'gongplan_buildings_v1', lease:'gongplan_lease_v1', renewal:'gongplan_renewal_v1', tenants:'gongplan_tenants_v1', subdelegation:'gongplan_subdelegation_v1', movein:'gongplan_movein_v1', instructors:'gongplan_instructors_v1', receipts:'gongplan_receipts_v1', empReceipts:'gongplan_empreceipts_v1', salaryReceipts:'gongplan_salaryreceipts_v1' };
+let data = { contract:[], docs:[], cert:[], employ:[], employees:[], official:[], buildings:[], lease:[], renewal:[], tenants:[], subdelegation:[], movein:[], instructors:[], receipts:[], empReceipts:[], salaryReceipts:[], settings:{ viewerMode:false, allowedTabs:['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts'], company:{ name:'', ceo:'', address:'', bizNumber:'', issuerName:'', issuerPosition:'', hasSeal:false, hasLogo:false, hasLogo2:false } } };
 let currentTab = 'contract';
 let currentCategory = 'docs_cat';
 const TAB_CATEGORY_MAP = {
   contract:'docs_cat', docs:'docs_cat', cert:'docs_cat',
   employ:'issue_cat', official:'issue_cat',
   leave:'hr_cat', comp:'hr_cat', workGP:'hr_cat', workHM:'hr_cat', employees:'hr_cat',
-  movein:'ibagu_cat', lease:'ibagu_cat', renewal:'ibagu_cat', buildings:'ibagu_cat', tenants:'ibagu_cat', subdelegation:'ibagu_cat'
+  movein:'ibagu_cat', lease:'ibagu_cat', renewal:'ibagu_cat', buildings:'ibagu_cat', tenants:'ibagu_cat', subdelegation:'ibagu_cat',
+  instructors:'hame_cat', receipts:'hame_cat', salaryReceipts:'hame_cat'
 };
 
 function setCategory(cat){
@@ -1725,7 +1853,7 @@ async function saveSettings(){
 function applyRestrictions(){
   const loggedIn = sessionRole !== null;
   const restricted = isRestricted();
-  const allowed = restricted ? data.settings.allowedTabs : ['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein'];
+  const allowed = restricted ? data.settings.allowedTabs : ['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts'];
 
   // 세부탭: 권한 + 현재 카테고리 둘 다 만족해야 보임
   document.querySelectorAll('#tabsBar .tab-btn').forEach(btn=>{
@@ -1757,11 +1885,12 @@ function applyRestrictions(){
   }
 
   document.getElementById('addBtn').style.display = (!loggedIn || currentTab==='leave' || currentTab==='comp' || currentTab==='workGP' || currentTab==='workHM') ? 'none' : ((!restricted || currentTab==='employ') ? 'inline-block' : 'none');
-  document.getElementById('addBtn').textContent = (restricted && currentTab==='employ') ? '🪪 재직증명서 발급' : '+ 새 항목 추가';
+  document.getElementById('addBtn').textContent = (restricted && currentTab==='employ') ? '🪪 재직증명서 발급' : (currentTab==='salaryReceipts' ? '💰 강사료 일괄 발급' : '+ 새 항목 추가');
   document.getElementById('importBtn').style.display = (loggedIn && !restricted) ? 'inline-block' : 'none';
   document.getElementById('exportBtn').style.display = (loggedIn && !restricted) ? 'inline-block' : 'none';
   document.getElementById('quantExportBtn').style.display = loggedIn ? 'inline-block' : 'none';
   document.getElementById('bulkEmployBtn').style.display = (loggedIn && !restricted && currentTab==='employ') ? 'inline-block' : 'none';
+  document.getElementById('bulkReceiptBtn').style.display = (loggedIn && !restricted && currentTab==='receipts') ? 'inline-block' : 'none';
   document.getElementById('restrictionBadge').textContent = restricted ? '👁 뷰어로 로그인됨 (다운로드만 가능)' : (sessionRole === 'admin' ? '🔓 관리자로 로그인됨' : '');
 }
 
@@ -1777,7 +1906,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 db.settings({ experimentalAutoDetectLongPolling: true, merge: true });
-const COLLECTIONS = { contract:'contracts', docs:'docs', cert:'certs', employ:'employment_certificates', employees:'employees', official:'official_docs', buildings:'buildings', lease:'lease_contracts', renewal:'renewal_requests', tenants:'tenants', subdelegation:'subdelegation_requests', movein:'movein_contracts' };
+const COLLECTIONS = { contract:'contracts', docs:'docs', cert:'certs', employ:'employment_certificates', employees:'employees', official:'official_docs', buildings:'buildings', lease:'lease_contracts', renewal:'renewal_requests', tenants:'tenants', subdelegation:'subdelegation_requests', movein:'movein_contracts', instructors:'instructors', receipts:'instructor_receipts', empReceipts:'employee_receipts', salaryReceipts:'instructor_salary_receipts' };
 
 function updateSyncStatus(msg){
   document.getElementById('syncStatus').textContent = msg || '';
@@ -1857,6 +1986,29 @@ async function initFirebaseSync(){
     render();
   }, err => { console.error(err); updateSyncStatus('🔴 입주계약서 동기화 실패: ' + err.message); });
 
+  db.collection('instructors').onSnapshot(snap => {
+    data.instructors = snap.docs.map(d => fixInstructorItem(d.data()));
+    localStorage.setItem(KEYS.instructors, JSON.stringify(data.instructors));
+    render();
+  }, err => { console.error(err); updateSyncStatus('🔴 강사 관리 동기화 실패: ' + err.message); });
+
+  db.collection('instructor_receipts').onSnapshot(snap => {
+    data.receipts = snap.docs.map(d => fixReceiptItem(d.data()));
+    localStorage.setItem(KEYS.receipts, JSON.stringify(data.receipts));
+    render();
+  }, err => { console.error(err); updateSyncStatus('🔴 강사 영수증 동기화 실패: ' + err.message); });
+
+  db.collection('instructor_salary_receipts').onSnapshot(snap => {
+    data.salaryReceipts = snap.docs.map(d => fixSalaryReceiptItem(d.data()));
+    localStorage.setItem(KEYS.salaryReceipts, JSON.stringify(data.salaryReceipts));
+    render();
+  }, err => { console.error(err); updateSyncStatus('🔴 강사 영수증(월급) 동기화 실패: ' + err.message); });
+
+  db.collection('employee_receipts').onSnapshot(snap => {
+    data.empReceipts = snap.docs.map(d => fixEmpReceiptItem(d.data()));
+    localStorage.setItem(KEYS.empReceipts, JSON.stringify(data.empReceipts));
+  }, err => { console.error(err); updateSyncStatus('🔴 직원 강사비 영수증 동기화 실패: ' + err.message); });
+
   db.collection('renewal_requests').onSnapshot(snap => {
     data.renewal = snap.docs.map(d => fixRenewalItem(d.data()));
     localStorage.setItem(KEYS.renewal, JSON.stringify(data.renewal));
@@ -1878,7 +2030,7 @@ async function initFirebaseSync(){
   db.collection('settings').doc('main').onSnapshot(snap => {
     if(snap.exists){
       data.settings = snap.data();
-      if(!Array.isArray(data.settings.allowedTabs)) data.settings.allowedTabs = ['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein'];
+      if(!Array.isArray(data.settings.allowedTabs)) data.settings.allowedTabs = ['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts'];
       if(!data.settings.company) data.settings.company = { name:'', ceo:'', address:'', bizNumber:'', issuerName:'', issuerPosition:'', hasSeal:false, hasLogo:false, hasLogo2:false };
     }
     applyRestrictions();
@@ -2039,6 +2191,29 @@ function fixMoveinItem(item){
     signDate:'', ...item
   };
 }
+function fixInstructorItem(item){
+  return {
+    subject:'', name:'', rrn:'', address:'', affiliation:'', position:'', contact:'', bankInfo:'', salary:'', hasSeal:false, ...item
+  };
+}
+function fixReceiptItem(item){
+  return {
+    instructorId:'', name:'', rrn:'', address:'', affiliation:'', position:'', contact:'', bankInfo:'', hasSeal:false,
+    subject:'', amount:'', issueDate:'', level:'', receiptNo:'', receiptType:'session', ...item
+  };
+}
+function fixSalaryReceiptItem(item){
+  return {
+    instructorId:'', name:'', rrn:'', address:'', affiliation:'', position:'', contact:'', bankInfo:'', hasSeal:false,
+    subject:'', amount:'', issueDate:'', receiptNo:'', receiptType:'salary', ...item
+  };
+}
+function fixEmpReceiptItem(item){
+  return {
+    employeeId:'', name:'', rrn:'', address:'', position:'', contact:'', bankInfo:'', hasSeal:false,
+    subject:'', amount:'', issueDate:'', receiptNo:'', ...item
+  };
+}
 function fixRenewalItem(item){
   return {
     companyName:'', phone:'', repName:'', repBirth:'', repAddress:'',
@@ -2056,11 +2231,11 @@ function fixSubdelegationItem(item){
   };
 }
 function fixEmployeeItem(item){
-  return { name:'', rrn:'', address:'', hireDate:'', endDate:'', code:'', position:'', team:'', allowIssue:false, openingBalance:0, accrualOverrides:{}, compAccrualOverrides:{}, confirmedEvents:{}, ...item };
+  return { name:'', rrn:'', address:'', hireDate:'', endDate:'', code:'', position:'', team:'', allowIssue:false, contact:'', bankInfo:'', hasSeal:false, openingBalance:0, accrualOverrides:{}, compAccrualOverrides:{}, confirmedEvents:{}, ...item };
 }
 
 function migrateData(d){
-  if(!d) return { contract:[], docs:[], cert:[], employ:[], employees:[], official:[], buildings:[], lease:[], renewal:[], tenants:[], subdelegation:[], movein:[] };
+  if(!d) return { contract:[], docs:[], cert:[], employ:[], employees:[], official:[], buildings:[], lease:[], renewal:[], tenants:[], subdelegation:[], movein:[], instructors:[], receipts:[], empReceipts:[], salaryReceipts:[] };
   d.contract = (d.contract||[]).map(fixContractItem);
   d.docs = (d.docs || d.education || []).map(fixDocItem);
   delete d.education;
@@ -2074,10 +2249,14 @@ function migrateData(d){
   d.tenants = (d.tenants||[]).map(fixTenantItem);
   d.subdelegation = (d.subdelegation||[]).map(fixSubdelegationItem);
   d.movein = (d.movein||[]).map(fixMoveinItem);
+  d.instructors = (d.instructors||[]).map(fixInstructorItem);
+  d.receipts = (d.receipts||[]).map(fixReceiptItem);
+  d.empReceipts = (d.empReceipts||[]).map(fixEmpReceiptItem);
+  d.salaryReceipts = (d.salaryReceipts||[]).map(fixSalaryReceiptItem);
   if(!d.settings || typeof d.settings !== 'object'){
-    d.settings = { viewerMode:false, allowedTabs:['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein'], company:{ name:'', ceo:'', address:'', bizNumber:'', issuerName:'', issuerPosition:'', hasSeal:false, hasLogo:false, hasLogo2:false } };
+    d.settings = { viewerMode:false, allowedTabs:['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts'], company:{ name:'', ceo:'', address:'', bizNumber:'', issuerName:'', issuerPosition:'', hasSeal:false, hasLogo:false, hasLogo2:false } };
   }
-  if(!Array.isArray(d.settings.allowedTabs)) d.settings.allowedTabs = ['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein'];
+  if(!Array.isArray(d.settings.allowedTabs)) d.settings.allowedTabs = ['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts'];
   d.settings.allowedTabs = d.settings.allowedTabs.map(t => t==='education' ? 'docs' : t);
   if(!d.settings.company) d.settings.company = { name:'', ceo:'', address:'', bizNumber:'', issuerName:'', issuerPosition:'', hasSeal:false, hasLogo:false, hasLogo2:false };
   return d;
@@ -2132,8 +2311,11 @@ function setTab(tab){
   document.getElementById('yearFilterBox').style.display = (tab==='contract') ? 'flex' : 'none';
   document.getElementById('leaveControlBox').style.display = isLedgerTab ? 'flex' : 'none';
   document.getElementById('workControlBox').style.display = isWorkTab ? 'flex' : 'none';
+  document.getElementById('receiptMonthBox').style.display = (tab==='receipts' || tab==='salaryReceipts') ? 'flex' : 'none';
+  if(tab==='receipts') populateReceiptMonthSelect();
   document.getElementById('bulkEmployBtn').style.display = (tab==='employ') ? 'inline-block' : 'none';
-  document.getElementById('addBtn').textContent = isEmployeesTab ? '+ 새 직원 추가' : ((isRestricted() && tab==='employ') ? '🪪 재직증명서 발급' : '+ 새 항목 추가');
+  document.getElementById('bulkReceiptBtn').style.display = (tab==='receipts') ? 'inline-block' : 'none';
+  document.getElementById('addBtn').textContent = isEmployeesTab ? '+ 새 직원 추가' : ((isRestricted() && tab==='employ') ? '🪪 재직증명서 발급' : (tab==='salaryReceipts' ? '💰 강사료 일괄 발급' : '+ 새 항목 추가'));
 
   document.getElementById('searchInput').style.display = isSpecialTab ? 'none' : 'block';
   document.getElementById('sortSelect').style.display = isSpecialTab ? 'none' : 'block';
@@ -2169,6 +2351,7 @@ function openEmployeeEdit(emp){
 
 function handleAddClick(){
   if(currentTab==='employees'){ openEmployeeManager(); return; }
+  if(currentTab==='salaryReceipts'){ openSalaryReceiptModal(); return; }
   openModal();
 }
 
@@ -2263,6 +2446,40 @@ function openModal(doc){
     document.getElementById('tn_contact').value = doc ? doc.contact : '';
     document.getElementById('tn_purpose').value = doc ? doc.purpose : '';
     document.getElementById('tn_notes').value = doc ? doc.notes : '';
+  } else if(tab==='instructors'){
+    document.getElementById('modalTitle-instructors').textContent = doc ? '강사 수정' : '강사 추가';
+    document.getElementById('in_editId').value = doc ? doc.id : '';
+    document.getElementById('in_subject').value = doc ? doc.subject : '';
+    document.getElementById('in_name').value = doc ? doc.name : '';
+    document.getElementById('in_rrn').value = doc ? doc.rrn : '';
+    document.getElementById('in_address').value = doc ? doc.address : '';
+    document.getElementById('in_affiliation').value = doc ? doc.affiliation : '';
+    document.getElementById('in_position').value = doc ? doc.position : '';
+    document.getElementById('in_contact').value = doc ? doc.contact : '';
+    document.getElementById('in_bankInfo').value = doc ? doc.bankInfo : '';
+    document.getElementById('in_salary').value = doc ? doc.salary : '';
+    document.getElementById('in_sealFile').value = '';
+    document.getElementById('in_seal_current').innerHTML = (doc && doc.hasSeal) ? `등록된 도장 있음 <button type="button" onclick="removeInstructorSeal('${doc.id}')" class="icon-btn del" style="margin-left:6px;">🗑 삭제</button>` : '등록된 도장 없음';
+  } else if(tab==='receipts'){
+    const today = new Date().toISOString().slice(0,10);
+    document.getElementById('modalTitle-receipts').textContent = doc ? '강사 영수증(교육청) 수정' : '강사 영수증(교육청) 작성';
+    document.getElementById('rc_editId').value = doc ? doc.id : '';
+    populateReceiptInstructorSelect();
+    document.getElementById('rc_instructorSelect').value = doc ? (doc.instructorId || '') : '';
+    document.getElementById('rc_subject').value = doc ? doc.subject : '';
+    document.getElementById('rc_amount').value = doc ? doc.amount : '';
+    document.getElementById('rc_issueDate').value = doc ? doc.issueDate : today;
+    document.getElementById('rc_level').value = doc ? doc.level : '';
+    document.getElementById('rc_receiptNo').value = doc ? doc.receiptNo : String(data.receipts.length + 1);
+    if(doc){
+      document.getElementById('rc_instructorSelect').dataset.snapshot = JSON.stringify({
+        name: doc.name, rrn: doc.rrn, address: doc.address, affiliation: doc.affiliation,
+        position: doc.position, contact: doc.contact, bankInfo: doc.bankInfo, hasSeal: doc.hasSeal
+      });
+    } else {
+      document.getElementById('rc_instructorSelect').dataset.snapshot = '';
+    }
+    updateReceiptPreview();
   } else if(tab==='movein'){
     const today = new Date().toISOString().slice(0,10);
     document.getElementById('modalTitle-movein').textContent = doc ? '입주계약서 수정' : '입주계약서 작성';
@@ -2829,6 +3046,422 @@ async function saveTenant(){
   if(!ok) return;
   closeModal('tenants');
   render();
+}
+
+async function saveInstructor(){
+  const btn = document.getElementById('in_saveBtn');
+  const name = document.getElementById('in_name').value.trim();
+  if(!name){ alert('성명을 입력해주세요.'); return; }
+  btn.disabled = true; btn.textContent = '저장 중...';
+  const id = document.getElementById('in_editId').value || ('in-'+Date.now());
+  const sealFile = await readFileAsData(document.getElementById('in_sealFile'));
+  const existing = data.instructors.find(d=>d.id===id);
+  const instructor = {
+    id,
+    subject: document.getElementById('in_subject').value.trim(),
+    name,
+    rrn: document.getElementById('in_rrn').value.trim(),
+    address: document.getElementById('in_address').value.trim(),
+    affiliation: document.getElementById('in_affiliation').value.trim(),
+    position: document.getElementById('in_position').value.trim(),
+    contact: document.getElementById('in_contact').value.trim(),
+    bankInfo: document.getElementById('in_bankInfo').value.trim(),
+    salary: document.getElementById('in_salary').value.trim(),
+    hasSeal: sealFile ? true : (existing ? !!existing.hasSeal : false),
+    updated: Date.now()
+  };
+  if(sealFile){
+    const ok = await saveFileBlob(id, 'seal', sealFile);
+    if(!ok){ btn.disabled = false; btn.textContent = '저장'; return; }
+  }
+  const idx = data.instructors.findIndex(d=>d.id===id);
+  if(idx>=0) data.instructors[idx]=instructor; else data.instructors.push(instructor);
+  cacheLocal('instructors');
+  const ok = await saveItemToFirestore('instructors', instructor);
+  btn.disabled = false; btn.textContent = '저장';
+  if(!ok) return;
+  closeModal('instructors');
+  render();
+}
+
+async function removeInstructorSeal(id){
+  if(!confirm('도장 이미지를 삭제할까요?')) return;
+  await deleteFileBlob(id, 'seal');
+  const instructor = data.instructors.find(d=>d.id===id);
+  if(instructor){
+    instructor.hasSeal = false;
+    await saveItemToFirestore('instructors', instructor);
+  }
+  document.getElementById('in_seal_current').innerHTML = '등록된 도장 없음';
+}
+
+function calcReceiptTax(amount){
+  const incomeTax = Math.round(amount * 0.03);
+  const localTax = Math.round((incomeTax * 0.1) / 10) * 10;
+  const totalWithholding = (incomeTax + localTax > 11000) ? (incomeTax + localTax) : 0;
+  const netAmount = amount - totalWithholding;
+  return { incomeTax, localTax, totalWithholding, netAmount };
+}
+
+function populateReceiptInstructorSelect(){
+  const sel = document.getElementById('rc_instructorSelect');
+  sel.innerHTML = '<option value="">선택하세요</option>' +
+    data.instructors.map(i => `<option value="${i.id}">${escapeHtml(i.name)}${i.subject ? ' ('+escapeHtml(i.subject)+')' : ''}</option>`).join('');
+}
+
+function applyReceiptInstructor(){
+  const sel = document.getElementById('rc_instructorSelect');
+  const id = sel.value;
+  sel.dataset.snapshot = '';
+  if(!id) return;
+  const ins = data.instructors.find(x=>x.id===id);
+  if(!ins) return;
+  if(!document.getElementById('rc_subject').value.trim() && ins.subject) document.getElementById('rc_subject').value = ins.subject;
+  updateReceiptPreview();
+}
+
+function updateReceiptPreview(){
+  const amountRaw = document.getElementById('rc_amount').value;
+  const amount = parseAmount(amountRaw);
+  const box = document.getElementById('rc_previewBox');
+  if(!amount){ box.innerHTML = '금액을 입력하면 세금 계산 미리보기가 여기 나와요.'; return; }
+  const { incomeTax, localTax, totalWithholding, netAmount } = calcReceiptTax(amount);
+  box.innerHTML = `
+    사업소득세(3%) : ${incomeTax.toLocaleString('ko-KR')}원<br>
+    주민세 : ${localTax.toLocaleString('ko-KR')}원<br>
+    실원천징수액 계 : ${totalWithholding.toLocaleString('ko-KR')}원<br>
+    <b>실수령액(과세후) : ${netAmount.toLocaleString('ko-KR')}원</b>
+  `;
+}
+
+async function saveReceipt(shouldPrint){
+  const btn = shouldPrint ? document.getElementById('rc_saveBtn') : document.getElementById('rc_saveOnlyBtn');
+  const otherBtn = shouldPrint ? document.getElementById('rc_saveOnlyBtn') : document.getElementById('rc_saveBtn');
+  const instructorId = document.getElementById('rc_instructorSelect').value;
+  if(!instructorId){ alert('선생님을 선택해주세요.'); return; }
+  const amount = parseAmount(document.getElementById('rc_amount').value);
+  if(!amount){ alert('금액을 입력해주세요.'); return; }
+  btn.disabled = true; otherBtn.disabled = true;
+  const originalText = btn.textContent;
+  btn.textContent = '저장 중...';
+
+  let snap = null;
+  const snapRaw = document.getElementById('rc_instructorSelect').dataset.snapshot;
+  if(snapRaw){ try{ snap = JSON.parse(snapRaw); }catch(e){ snap = null; } }
+  const ins = data.instructors.find(x=>x.id===instructorId) || snap;
+
+  const id = document.getElementById('rc_editId').value || ('rc-'+Date.now());
+  const doc = {
+    id,
+    instructorId,
+    name: ins ? ins.name : '',
+    rrn: ins ? ins.rrn : '',
+    address: ins ? ins.address : '',
+    affiliation: ins ? ins.affiliation : '',
+    position: ins ? ins.position : '',
+    contact: ins ? ins.contact : '',
+    bankInfo: ins ? ins.bankInfo : '',
+    hasSeal: ins ? !!ins.hasSeal : false,
+    subject: document.getElementById('rc_subject').value.trim(),
+    amount,
+    issueDate: document.getElementById('rc_issueDate').value || new Date().toISOString().slice(0,10),
+    level: document.getElementById('rc_level').value,
+    receiptNo: document.getElementById('rc_receiptNo').value.trim(),
+    updated: Date.now()
+  };
+  const idx = data.receipts.findIndex(d=>d.id===id);
+  if(idx>=0) data.receipts[idx]=doc; else data.receipts.push(doc);
+  cacheLocal('receipts');
+  const ok = await saveItemToFirestore('receipts', doc);
+  btn.disabled = false; otherBtn.disabled = false;
+  btn.textContent = originalText;
+  if(!ok) return;
+  closeModal('receipts');
+  render();
+  if(shouldPrint) printReceipt(doc);
+}
+
+function receiptBodyHTML(doc, sealImg){
+  const { incomeTax, localTax, totalWithholding, netAmount } = calcReceiptTax(doc.amount);
+  const title = docTitle(doc);
+  const signDate = formatKoreanDate(doc.issueDate);
+  return `
+  <div class="receipt-page">
+    <div class="receipt-no-box">번호 <span>${escapeHtml(doc.receiptNo||'')}</span></div>
+    <div class="receipt-title">영 수 증</div>
+    <table class="receipt-table">
+      <tr><td class="lbl">건명</td><td>${escapeHtml(title)}</td><td class="lbl">일자</td><td>${escapeHtml(doc.issueDate||'')}</td></tr>
+      <tr><td class="lbl">성명</td><td>${escapeHtml(doc.name)}</td><td class="lbl">금액</td><td>₩${doc.amount.toLocaleString('ko-KR')}</td></tr>
+      <tr><td class="lbl">주민번호</td><td>${escapeHtml(doc.rrn)}</td><td class="lbl">사업소득세 (3%)</td><td>₩${incomeTax.toLocaleString('ko-KR')}</td></tr>
+      <tr><td class="lbl">주소</td><td>${escapeHtml(doc.address)}</td><td class="lbl">주민세</td><td>₩${localTax.toLocaleString('ko-KR')}</td></tr>
+      <tr><td class="lbl">소속</td><td>${escapeHtml(doc.affiliation)}</td><td class="lbl">실원천징수액 계</td><td>₩${totalWithholding.toLocaleString('ko-KR')}</td></tr>
+      <tr><td class="lbl">직위/직급</td><td>${escapeHtml(doc.position)}</td><td class="lbl">실수령액 (과세후)</td><td>₩${netAmount.toLocaleString('ko-KR')}</td></tr>
+      <tr><td class="lbl">연락처</td><td>${escapeHtml(doc.contact)}</td><td class="lbl">계좌번호(은행)</td><td>${escapeHtml(doc.bankInfo)}</td></tr>
+    </table>
+    <div class="receipt-consent">수당 지급 및 국세청(소득세) 신고를 위한 개인정보 수집·이용·제공에 동의합니다.</div>
+    <div class="receipt-confirm">상기 금액을 수령하였음을 확인함</div>
+    <div class="receipt-date">${signDate}</div>
+    <div class="receipt-sign">
+      <span>성명</span>
+      <span class="sign-name-wrap">
+        <b>${escapeHtml(doc.name)}</b>
+        ${sealImg && doc.hasSeal ? `<img src="${sealImg}" class="receipt-seal">` : ''}
+      </span>
+    </div>
+  </div>`;
+}
+
+function docTitle(doc){
+  if(doc.receiptType==='salary'){
+    const monthLabel = doc.issueDate ? doc.issueDate.slice(0,7).replace('-','년 ')+'월' : '';
+    return `해운대메이커센터 ${monthLabel} 강사료`;
+  }
+  return `해운대메이커센터 ${doc.subject || ''} 수업`;
+}
+
+function receiptStyles(){
+  return `
+  body{ font-family:'Malgun Gothic','Noto Sans KR',sans-serif; padding:20px; color:#111; }
+  .receipt-page{ max-width:700px; margin:0 auto 40px; page-break-after: always; }
+  .receipt-page:last-child{ page-break-after: auto; }
+  table.receipt-table{ width:100%; border-collapse:collapse; margin-bottom:2px; table-layout:fixed; }
+  table.receipt-table td{ border:1px solid #999; padding:8px 10px; font-size:12.5px; word-break:keep-all; overflow-wrap:break-word; }
+  table.receipt-table td:nth-child(1){ background:#F4F1E8; font-weight:700; width:20%; text-align:center; }
+  table.receipt-table td:nth-child(2){ width:30%; }
+  table.receipt-table td:nth-child(3){ background:#F4F1E8; font-weight:700; width:20%; text-align:center; }
+  table.receipt-table td:nth-child(4){ width:30%; }
+  .receipt-no-box{ display:inline-block; border:1px solid #999; background:#F4F1E8; padding:6px 16px; font-size:12px; font-weight:700; margin-bottom:6px; }
+  .receipt-no-box span{ font-weight:400; margin-left:8px; }
+  .receipt-title{ text-align:center; font-size:24px; font-weight:800; letter-spacing:12px; margin:14px 0 10px; }
+  .receipt-consent{ text-align:center; color:#9c27b0; font-size:13px; margin:16px 0 4px; border:1px solid #999; padding:10px; }
+  .receipt-confirm{ text-align:center; margin:22px 0 6px; font-size:14px; }
+  .receipt-date{ text-align:center; margin:6px 0 20px; font-size:14px; }
+  .receipt-sign{ display:flex; justify-content:center; align-items:center; gap:20px; font-size:16px; margin-bottom:10px; }
+  .sign-name-wrap{ position:relative; display:inline-flex; align-items:center; padding-right:50px; }
+  .receipt-seal{ width:56px; height:56px; position:absolute; right:-10px; top:50%; transform:translateY(-50%); opacity:0.9; }
+  @media print{ body{ padding:10px; } }
+  `;
+}
+
+async function getInstructorSealImage(doc){
+  if(!doc.hasSeal || !doc.instructorId) return null;
+  const file = await fetchFileBlob(doc.instructorId, 'seal');
+  return file ? file.dataUrl : null;
+}
+
+async function printReceipt(doc){
+  const sealImg = await getInstructorSealImage(doc);
+  const win = window.open('', '_blank');
+  win.document.write(`
+<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>영수증_${escapeHtml(doc.name)}</title>
+<style>${receiptStyles()}</style>
+</head><body>
+  ${receiptBodyHTML(doc, sealImg)}
+</body></html>`);
+  win.document.close();
+  if(sealImg){
+    const img = win.document.querySelector('.receipt-seal');
+    if(img){ await waitImgLoad(img); }
+  }
+  win.print();
+}
+
+async function printBulkReceipts(){
+  const items = getFilteredSortedItems();
+  if(!items.length){ alert('현재 필터에 해당하는 영수증이 없어요.'); return; }
+  const sealImages = await Promise.all(items.map(d => getInstructorSealImage(d)));
+  const win = window.open('', '_blank');
+  win.document.write(`
+<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>강사영수증_일괄발급</title>
+<style>${receiptStyles()}</style>
+</head><body>
+  ${items.map((d,i) => receiptBodyHTML(d, sealImages[i])).join('')}
+  <script>window.onload = () => window.print();<\/script>
+</body></html>`);
+  win.document.close();
+}
+
+async function printSalaryReceipt(doc){
+  const sealImg = await getInstructorSealImage(doc);
+  const win = window.open('', '_blank');
+  win.document.write(`
+<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>강사영수증(월급)_${escapeHtml(doc.name)}</title>
+<style>${receiptStyles()}</style>
+</head><body>
+  ${receiptBodyHTML(doc, sealImg)}
+</body></html>`);
+  win.document.close();
+  if(sealImg){
+    const img = win.document.querySelector('.receipt-seal');
+    if(img){ await waitImgLoad(img); }
+  }
+  win.print();
+}
+
+function openSalaryReceiptModal(){
+  document.getElementById('sr_issueDate').value = new Date().toISOString().slice(0,10);
+  const list = data.instructors.filter(i => parseAmount(i.salary) > 0);
+  const el = document.getElementById('sr_instructorList');
+  if(list.length === 0){
+    el.innerHTML = '<div style="font-size:12.5px; color:var(--mist);">월급이 등록된 강사가 없어요. "강사 관리"에서 월급을 먼저 입력해주세요.</div>';
+  } else {
+    el.innerHTML = list.map(i => `
+      <label style="display:flex; align-items:center; gap:10px; font-size:13.5px; padding:6px 4px;">
+        <input type="checkbox" class="sr-check" value="${i.id}" style="width:auto;">
+        <span style="flex:1;">${escapeHtml(i.name)}${i.subject ? ' ('+escapeHtml(i.subject)+')' : ''}</span>
+        <span class="mono" style="color:var(--gold-deep);">${escapeHtml(i.salary)}</span>
+      </label>
+    `).join('');
+  }
+  document.getElementById('overlay-salaryReceipts').classList.add('open');
+}
+
+async function issueSalaryReceiptsBulk(){
+  const issueDate = document.getElementById('sr_issueDate').value;
+  if(!issueDate){ alert('발행월(일자)을 선택해주세요.'); return; }
+  const checked = Array.from(document.querySelectorAll('.sr-check:checked')).map(cb => cb.value);
+  if(checked.length === 0){ alert('발급할 선생님을 한 명 이상 체크해주세요.'); return; }
+  const btn = document.getElementById('sr_issueBtn');
+  btn.disabled = true;
+  const originalText = btn.textContent;
+  btn.textContent = '발급 중...';
+
+  const newDocs = [];
+  let receiptCounter = data.salaryReceipts.length;
+  for(const instructorId of checked){
+    const ins = data.instructors.find(x=>x.id===instructorId);
+    if(!ins) continue;
+    receiptCounter++;
+    const doc = {
+      id: 'sr-'+Date.now()+'-'+instructorId,
+      instructorId,
+      name: ins.name,
+      rrn: ins.rrn,
+      address: ins.address,
+      affiliation: ins.affiliation,
+      position: ins.position,
+      contact: ins.contact,
+      bankInfo: ins.bankInfo,
+      hasSeal: !!ins.hasSeal,
+      subject: '',
+      amount: parseAmount(ins.salary),
+      issueDate,
+      receiptNo: String(receiptCounter),
+      receiptType: 'salary',
+      updated: Date.now()
+    };
+    newDocs.push(doc);
+  }
+
+  for(const doc of newDocs){
+    data.salaryReceipts.push(doc);
+    await saveItemToFirestore('salaryReceipts', doc);
+  }
+  cacheLocal('salaryReceipts');
+  btn.disabled = false;
+  btn.textContent = originalText;
+  closeModal('salaryReceipts');
+  render();
+
+  const sealImages = await Promise.all(newDocs.map(d => getInstructorSealImage(d)));
+  const win = window.open('', '_blank');
+  win.document.write(`
+<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>강사영수증(월급)_일괄발급</title>
+<style>${receiptStyles()}</style>
+</head><body>
+  ${newDocs.map((d,i) => receiptBodyHTML(d, sealImages[i])).join('')}
+  <script>window.onload = () => window.print();<\/script>
+</body></html>`);
+  win.document.close();
+}
+
+function openEmpReceiptModal(emp){
+  document.getElementById('er_employeeId').value = emp.id;
+  document.getElementById('er_editId').value = '';
+  document.getElementById('er_who').textContent = `${emp.name}${emp.position ? ' · '+emp.position : ''} 님께 발급합니다. (연락처·계좌·도장은 직원 정보에서 자동으로 들어가요)`;
+  document.getElementById('er_subject').value = '';
+  document.getElementById('er_amount').value = '';
+  document.getElementById('er_issueDate').value = new Date().toISOString().slice(0,10);
+  document.getElementById('er_receiptNo').value = String(data.empReceipts.length + 1);
+  document.getElementById('er_previewBox').innerHTML = '금액을 입력하면 세금 계산 미리보기가 여기 나와요.';
+  document.getElementById('overlay-empReceipt').classList.add('open');
+}
+
+function updateEmpReceiptPreview(){
+  const amount = parseAmount(document.getElementById('er_amount').value);
+  const box = document.getElementById('er_previewBox');
+  if(!amount){ box.innerHTML = '금액을 입력하면 세금 계산 미리보기가 여기 나와요.'; return; }
+  const { incomeTax, localTax, totalWithholding, netAmount } = calcReceiptTax(amount);
+  box.innerHTML = `
+    사업소득세(3%) : ${incomeTax.toLocaleString('ko-KR')}원<br>
+    주민세 : ${localTax.toLocaleString('ko-KR')}원<br>
+    실원천징수액 계 : ${totalWithholding.toLocaleString('ko-KR')}원<br>
+    <b>실수령액(과세후) : ${netAmount.toLocaleString('ko-KR')}원</b>
+  `;
+}
+
+async function getEmployeeSealImage(doc){
+  if(!doc.hasSeal || !doc.employeeId) return null;
+  const file = await fetchFileBlob(doc.employeeId, 'seal');
+  return file ? file.dataUrl : null;
+}
+
+async function saveEmpReceipt(shouldPrint){
+  const btn = shouldPrint ? document.getElementById('er_saveBtn') : document.getElementById('er_saveOnlyBtn');
+  const otherBtn = shouldPrint ? document.getElementById('er_saveOnlyBtn') : document.getElementById('er_saveBtn');
+  const employeeId = document.getElementById('er_employeeId').value;
+  const emp = data.employees.find(x=>x.id===employeeId);
+  if(!emp){ alert('직원 정보를 찾을 수 없어요.'); return; }
+  const amount = parseAmount(document.getElementById('er_amount').value);
+  if(!amount){ alert('금액을 입력해주세요.'); return; }
+  btn.disabled = true; otherBtn.disabled = true;
+  const originalText = btn.textContent;
+  btn.textContent = '저장 중...';
+
+  const id = document.getElementById('er_editId').value || ('er-'+Date.now());
+  const doc = {
+    id,
+    employeeId,
+    name: emp.name,
+    rrn: emp.rrn,
+    address: emp.address,
+    affiliation: emp.team || (data.settings.company.name || ''),
+    position: emp.position,
+    contact: emp.contact,
+    bankInfo: emp.bankInfo,
+    hasSeal: !!emp.hasSeal,
+    subject: document.getElementById('er_subject').value.trim(),
+    amount,
+    issueDate: document.getElementById('er_issueDate').value || new Date().toISOString().slice(0,10),
+    receiptNo: document.getElementById('er_receiptNo').value.trim(),
+    updated: Date.now()
+  };
+  const idx = data.empReceipts.findIndex(d=>d.id===id);
+  if(idx>=0) data.empReceipts[idx]=doc; else data.empReceipts.push(doc);
+  cacheLocal('empReceipts');
+  const ok = await saveItemToFirestore('empReceipts', doc);
+  btn.disabled = false; otherBtn.disabled = false;
+  btn.textContent = originalText;
+  if(!ok) return;
+  closeModal('empReceipt');
+  if(shouldPrint) await printEmpReceipt(doc);
+}
+
+async function printEmpReceipt(doc){
+  const sealImg = await getEmployeeSealImage(doc);
+  const win = window.open('', '_blank');
+  win.document.write(`
+<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>영수증_${escapeHtml(doc.name)}</title>
+<style>${receiptStyles()}</style>
+</head><body>
+  ${receiptBodyHTML(doc, sealImg)}
+</body></html>`);
+  win.document.close();
+  if(sealImg){
+    const img = win.document.querySelector('.receipt-seal');
+    if(img){ await waitImgLoad(img); }
+  }
+  win.print();
 }
 
 async function saveMovein(shouldPrint){
@@ -3615,6 +4248,7 @@ function renderEmployeeList(){
         </div>
       </div>
       <div style="display:flex; gap:6px;">
+        <button class="icon-btn" onclick='openEmpReceiptModal(${JSON.stringify(e).replace(/'/g,"&#39;")})'>💰 영수증 발급</button>
         <button class="icon-btn" onclick='editEmployeeForm(${JSON.stringify(e).replace(/'/g,"&#39;")})'>수정</button>
         <button class="icon-btn del" onclick="deleteEmployee('${e.id}')">삭제</button>
       </div>
@@ -3641,6 +4275,10 @@ function resetEmployeeForm(){
   document.getElementById('emp_position').value = '';
   document.getElementById('emp_openingBalance').value = '';
   document.getElementById('emp_team').value = '';
+  document.getElementById('emp_contact').value = '';
+  document.getElementById('emp_bankInfo').value = '';
+  document.getElementById('emp_sealFile').value = '';
+  document.getElementById('emp_seal_current').innerHTML = '등록된 도장 없음';
   document.getElementById('emp_allowIssue').checked = false;
   document.getElementById('emp_saveBtn').textContent = '직원 추가';
   document.getElementById('emp_cancelEditBtn').style.display = 'none';
@@ -3657,6 +4295,10 @@ function editEmployeeForm(emp){
   document.getElementById('emp_position').value = emp.position;
   document.getElementById('emp_openingBalance').value = emp.openingBalance || '';
   document.getElementById('emp_team').value = emp.team || '';
+  document.getElementById('emp_contact').value = emp.contact || '';
+  document.getElementById('emp_bankInfo').value = emp.bankInfo || '';
+  document.getElementById('emp_sealFile').value = '';
+  document.getElementById('emp_seal_current').innerHTML = emp.hasSeal ? `등록된 도장 있음 <button type="button" onclick="removeEmployeeSeal('${emp.id}')" class="icon-btn del" style="margin-left:6px;">🗑 삭제</button>` : '등록된 도장 없음';
   document.getElementById('emp_allowIssue').checked = !!emp.allowIssue;
   document.getElementById('emp_saveBtn').textContent = '수정 저장';
   document.getElementById('emp_cancelEditBtn').style.display = 'inline-block';
@@ -3669,6 +4311,11 @@ async function saveEmployee(){
   btn.disabled = true;
   const id = document.getElementById('emp_editId').value || ('emp-'+Date.now());
   const existing = data.employees.find(d=>d.id===id) || {};
+  const sealFile = await readFileAsData(document.getElementById('emp_sealFile'));
+  if(sealFile){
+    const ok = await saveFileBlob(id, 'seal', sealFile);
+    if(!ok){ btn.disabled = false; return; }
+  }
   const emp = {
     ...existing,
     id,
@@ -3681,6 +4328,9 @@ async function saveEmployee(){
     position: document.getElementById('emp_position').value.trim(),
     openingBalance: parseFloat(document.getElementById('emp_openingBalance').value) || 0,
     team: document.getElementById('emp_team').value,
+    contact: document.getElementById('emp_contact').value.trim(),
+    bankInfo: document.getElementById('emp_bankInfo').value.trim(),
+    hasSeal: sealFile ? true : !!existing.hasSeal,
     allowIssue: document.getElementById('emp_allowIssue').checked,
     updated: Date.now()
   };
@@ -3692,6 +4342,17 @@ async function saveEmployee(){
   resetEmployeeForm();
   renderEmployeeList();
   render();
+}
+
+async function removeEmployeeSeal(id){
+  if(!confirm('도장 이미지를 삭제할까요?')) return;
+  await deleteFileBlob(id, 'seal');
+  const emp = data.employees.find(d=>d.id===id);
+  if(emp){
+    emp.hasSeal = false;
+    await saveItemToFirestore('employees', emp);
+  }
+  document.getElementById('emp_seal_current').innerHTML = '등록된 도장 없음';
 }
 
 async function deleteEmployee(id){
@@ -3987,19 +4648,50 @@ function escapeHtml(str){
   return div.innerHTML;
 }
 
+function populateReceiptMonthSelect(){
+  const sel = document.getElementById('receiptMonthSelect');
+  const prev = sel.value;
+  const source = currentTab==='salaryReceipts' ? data.salaryReceipts : data.receipts;
+  const months = [...new Set(source.map(d => d.issueDate ? d.issueDate.slice(0,7) : '').filter(Boolean))].sort((a,b)=>b.localeCompare(a));
+  sel.innerHTML = '<option value="">전체</option>' + months.map(m => `<option value="${m}">${m.replace('-','년 ')}월</option>`).join('');
+  if(months.includes(prev)) sel.value = prev;
+}
+
+function getFilteredSortedItems(){
+  // 현재는 강사 영수증 일괄 인쇄 전용. 현재 화면(검색/칩/정렬/월선택)과 동일한 기준으로 필터링.
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  const sort = document.getElementById('sortSelect').value;
+  const monthSel = document.getElementById('receiptMonthSelect').value;
+  let items = data[currentTab].slice();
+  items = items.filter(d=>{
+    const chipMatch = activeChip==='전체' || d.level===activeChip;
+    const hay = [d.name,d.subject,d.receiptNo].join(' ').toLowerCase();
+    const searchMatch = !search || hay.includes(search);
+    const monthMatch = !monthSel || (d.issueDate||'').slice(0,7) === monthSel;
+    return chipMatch && searchMatch && monthMatch;
+  });
+  items.sort((a,b)=>{
+    if(sort==='month') return (a.issueDate||'').localeCompare(b.issueDate||'');
+    if(sort==='instructor') return (a.name||'').localeCompare(b.name||'','ko');
+    return (b.updated||0)-(a.updated||0);
+  });
+  return items;
+}
+
 function render(){
   applyRestrictions();
   renderSortOptions();
   renderChips();
   renderLeaveLedger();
   renderWorkGrid();
+  if(currentTab==='receipts' || currentTab==='salaryReceipts') populateReceiptMonthSelect();
   if(currentTab==='leave' || currentTab==='comp' || currentTab==='workGP' || currentTab==='workHM') return;
   const search = document.getElementById('searchInput').value.toLowerCase();
   const sort = document.getElementById('sortSelect').value;
   let items = data[currentTab].slice();
 
   items = items.filter(d=>{
-    const chipMatch = activeChip==='전체' || (currentTab==='contract' ? (d.categories||[]).includes(activeChip) : currentTab==='docs' ? expiryStatus(d)===activeChip : currentTab==='employ' ? d.name===activeChip : currentTab==='official' ? d.recipient===activeChip : (d.kind===activeChip || d.issuer===activeChip));
+    const chipMatch = activeChip==='전체' || (currentTab==='contract' ? (d.categories||[]).includes(activeChip) : currentTab==='docs' ? expiryStatus(d)===activeChip : currentTab==='employ' ? d.name===activeChip : currentTab==='official' ? d.recipient===activeChip : currentTab==='receipts' ? d.level===activeChip : (d.kind===activeChip || d.issuer===activeChip));
     let hay = '';
     if(currentTab==='contract') hay = [d.title,d.client,d.task,(d.categories||[]).join(' ')].join(' ');
     if(currentTab==='docs') hay = [d.name,d.notes].join(' ');
@@ -4009,6 +4701,9 @@ function render(){
     if(currentTab==='employees') hay = [d.name,d.position,d.code,d.team].join(' ');
     if(currentTab==='buildings') hay = [d.name,d.address,d.area,d.notes].join(' ');
     if(currentTab==='tenants') hay = [d.companyName,d.repName,d.address,d.contact].join(' ');
+    if(currentTab==='instructors') hay = [d.name,d.subject,d.affiliation,d.contact].join(' ');
+    if(currentTab==='receipts') hay = [d.name,d.subject,d.receiptNo].join(' ');
+    if(currentTab==='salaryReceipts') hay = [d.name,d.receiptNo].join(' ');
     if(currentTab==='lease') hay = [d.lesseeName,d.lessorName,d.propertyAddress].join(' ');
     if(currentTab==='movein') hay = [d.companyName,d.repName,d.spaceAddress].join(' ');
     if(currentTab==='renewal') hay = [d.companyName,d.repName,d.spaceAddress].join(' ');
@@ -4016,6 +4711,11 @@ function render(){
     const searchMatch = !search || hay.toLowerCase().includes(search);
     let amountMatch = true;
     let yearMatch = true;
+    let monthMatch = true;
+    if(currentTab==='receipts' || currentTab==='salaryReceipts'){
+      const monthSel = document.getElementById('receiptMonthSelect').value;
+      if(monthSel) monthMatch = (d.issueDate||'').slice(0,7) === monthSel;
+    }
     if(currentTab==='contract'){
       const minAmountInput = document.getElementById('minAmountInput').value.trim();
       if(minAmountInput){
@@ -4029,7 +4729,7 @@ function render(){
         yearMatch = !isNaN(minYear) && !isNaN(itemYear) && itemYear >= minYear;
       }
     }
-    return chipMatch && searchMatch && amountMatch && yearMatch;
+    return chipMatch && searchMatch && amountMatch && yearMatch && monthMatch;
   });
 
   items.sort((a,b)=>{
@@ -4071,6 +4771,17 @@ function render(){
     }
     if(currentTab==='tenants'){
       if(sort==='name') return (a.companyName||'').localeCompare(b.companyName||'','ko');
+    }
+    if(currentTab==='instructors'){
+      if(sort==='name') return (a.name||'').localeCompare(b.name||'','ko');
+    }
+    if(currentTab==='receipts'){
+      if(sort==='month') return (a.issueDate||'').localeCompare(b.issueDate||'');
+      if(sort==='instructor') return (a.name||'').localeCompare(b.name||'','ko');
+    }
+    if(currentTab==='salaryReceipts'){
+      if(sort==='month') return (a.issueDate||'').localeCompare(b.issueDate||'');
+      if(sort==='instructor') return (a.name||'').localeCompare(b.name||'','ko');
     }
     if(currentTab==='lease'){
       if(sort==='name') return (a.lesseeName||'').localeCompare(b.lesseeName||'','ko');
@@ -4277,6 +4988,70 @@ function render(){
           <button class="icon-btn del" onclick="deleteItem('tenants','${d.id}')">삭제</button>` : ''}
         </div>
       </div>`).join('') + '</div>';
+  } else if(currentTab==='instructors'){
+    content.innerHTML = '<div class="grid">' + items.map(d => `
+      <div class="card">
+        <div class="meta">${escapeHtml(d.subject || '-')}</div>
+        <h3>${escapeHtml(d.name)}</h3>
+        <div class="meta">${escapeHtml(d.affiliation || '-')} ${d.position ? '· '+escapeHtml(d.position) : ''}</div>
+        <div class="notes">${escapeHtml(d.contact || '-')}${d.hasSeal ? ' · 🔖 도장 등록됨' : ''}</div>
+        <div class="card-actions">
+          ${!isRestricted() ? `<button class="icon-btn" onclick='openModal(${JSON.stringify(d).replace(/'/g,"&#39;")})'>수정</button>
+          <button class="icon-btn del" onclick="deleteItem('instructors','${d.id}')">삭제</button>` : ''}
+        </div>
+      </div>`).join('') + '</div>';
+  } else if(currentTab==='receipts'){
+    // 월별로 하위 그룹핑 (기초/초급/중급/고급 칩으로 이미 1차 필터된 상태)
+    const groups = {};
+    items.forEach(d => {
+      const key = d.issueDate ? d.issueDate.slice(0,7) : '날짜 미지정';
+      if(!groups[key]) groups[key] = [];
+      groups[key].push(d);
+    });
+    const monthKeys = Object.keys(groups).sort((a,b)=> b.localeCompare(a)); // 최근월 먼저
+    content.innerHTML = monthKeys.map(month => `
+      <div class="month-group">
+        <div class="month-group-heading">${month==='날짜 미지정' ? month : month.replace('-','년 ')+'월'} (${groups[month].length}건)</div>
+        <div class="grid">
+          ${groups[month].map(d => `
+            <div class="card">
+              <div class="meta">${escapeHtml(d.issueDate || '-')}${d.level ? ' · '+escapeHtml(d.level) : ''}</div>
+              <h3>${escapeHtml(d.name)}</h3>
+              <div class="meta">${escapeHtml(d.subject ? '해운대메이커센터 '+d.subject+' 수업' : '-')}</div>
+              <div class="notes">₩${(d.amount||0).toLocaleString('ko-KR')}</div>
+              <div class="card-actions">
+                <button class="icon-btn" onclick='printReceipt(${JSON.stringify(d).replace(/'/g,"&#39;")})'>🖨 재발급/인쇄</button>
+                ${!isRestricted() ? `<button class="icon-btn" onclick='openModal(${JSON.stringify(d).replace(/'/g,"&#39;")})'>수정</button>
+                <button class="icon-btn del" onclick="deleteItem('receipts','${d.id}')">삭제</button>` : ''}
+              </div>
+            </div>`).join('')}
+        </div>
+      </div>`).join('');
+  } else if(currentTab==='salaryReceipts'){
+    const groups = {};
+    items.forEach(d => {
+      const key = d.issueDate ? d.issueDate.slice(0,7) : '날짜 미지정';
+      if(!groups[key]) groups[key] = [];
+      groups[key].push(d);
+    });
+    const monthKeys = Object.keys(groups).sort((a,b)=> b.localeCompare(a));
+    content.innerHTML = monthKeys.map(month => `
+      <div class="month-group">
+        <div class="month-group-heading">${month==='날짜 미지정' ? month : month.replace('-','년 ')+'월'} (${groups[month].length}건)</div>
+        <div class="grid">
+          ${groups[month].map(d => `
+            <div class="card">
+              <div class="meta">${escapeHtml(d.issueDate || '-')}</div>
+              <h3>${escapeHtml(d.name)}</h3>
+              <div class="meta">월급</div>
+              <div class="notes">₩${(d.amount||0).toLocaleString('ko-KR')}</div>
+              <div class="card-actions">
+                <button class="icon-btn" onclick='printSalaryReceipt(${JSON.stringify(d).replace(/'/g,"&#39;")})'>🖨 재발급/인쇄</button>
+                ${!isRestricted() ? `<button class="icon-btn del" onclick="deleteItem('salaryReceipts','${d.id}')">삭제</button>` : ''}
+              </div>
+            </div>`).join('')}
+        </div>
+      </div>`).join('');
   } else if(currentTab==='leave'){
     content.innerHTML = '<div class="grid">' + items.map(d => `
       <div class="card">
@@ -4298,6 +5073,9 @@ function renderSortOptions(){
   if(currentTab==='employees') opts = [['recent','최근수정순'],['name','이름순']];
   if(currentTab==='buildings') opts = [['recent','최근수정순'],['name','이름순']];
   if(currentTab==='tenants') opts = [['recent','최근수정순'],['name','회사명순']];
+  if(currentTab==='instructors') opts = [['recent','최근수정순'],['name','성명순']];
+  if(currentTab==='receipts') opts = [['recent','최근수정순'],['month','월별(발행일순)'],['instructor','선생님별']];
+  if(currentTab==='salaryReceipts') opts = [['recent','최근수정순'],['month','월별(발행일순)'],['instructor','선생님별']];
   if(currentTab==='lease') opts = [['recent','최근수정순'],['name','임차인순']];
   if(currentTab==='movein') opts = [['recent','최근수정순'],['name','회사명순']];
   if(currentTab==='renewal') opts = [['recent','최근수정순'],['name','회사명순']];
@@ -4316,6 +5094,7 @@ function renderChips(){
   if(currentTab==='cert') vals = vals.concat(['cert','award','agreement'], [...new Set(data.cert.map(d=>d.issuer).filter(Boolean))]);
   if(currentTab==='official') vals = vals.concat([...new Set(data.official.map(d=>d.recipient).filter(Boolean))]);
   if(currentTab==='employ') vals = vals.concat([...new Set(data.employ.map(d=>d.name).filter(Boolean))]);
+  if(currentTab==='receipts') vals = vals.concat(['기초','초급','중급','고급']);
   chipEl.innerHTML = vals.map(v => {
     let label = v;
     if(currentTab==='cert'){ label = v==='cert'?'자격/인증': v==='award'?'수상': v==='agreement'?'협약': v==='전체'?'전체':'👤 '+v; }
