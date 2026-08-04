@@ -209,6 +209,7 @@
     <button class="tab-btn" data-tab="cert" data-cat="docs_cat" onclick="setTab('cert')">🏅 자격·수상</button>
     <button class="tab-btn" data-tab="employ" data-cat="issue_cat" onclick="setTab('employ')">🪪 재직증명서</button>
     <button class="tab-btn" data-tab="official" data-cat="issue_cat" onclick="setTab('official')">📋 공문 작성</button>
+    <button class="tab-btn" data-tab="career" data-cat="issue_cat" onclick="setTab('career')">📜 경력증명서</button>
     <button class="tab-btn" data-tab="leave" data-cat="hr_cat" onclick="setTab('leave')">🏖 연차 관리</button>
     <button class="tab-btn" data-tab="comp" data-cat="hr_cat" onclick="setTab('comp')">🔄 대체휴무 관리</button>
     <button class="tab-btn" data-tab="workGP" data-cat="hr_cat" onclick="setTab('workGP')">🗓 빈시간(공공플랜)</button>
@@ -427,6 +428,25 @@
     <div class="modal-actions">
       <button class="btn secondary" onclick="closeModal('employ')">취소</button>
       <button class="btn" id="em_saveBtn" onclick="saveEmploy()">저장하고 발급</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 경력증명서 모달 ===== -->
+<div class="overlay" id="overlay-career">
+  <div class="modal">
+    <h2 id="modalTitle-career">경력증명서 발급</h2>
+    <input type="hidden" id="cr_editId">
+    <div class="field">
+      <label>성명</label>
+      <select id="cr_employeeId" onchange="previewCareerEmployeeInfo()"></select>
+    </div>
+    <div class="field" id="cr_preview" style="font-size:13px; color:var(--mist);"></div>
+    <div class="field"><label>담당업무</label><input id="cr_duty" placeholder="예: 디자인"></div>
+    <div class="field"><label>발급일</label><input type="date" id="cr_issueDate" min="1900-01-01" max="2099-12-31"></div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeModal('career')">취소</button>
+      <button class="btn" id="cr_saveBtn" onclick="saveCareer()">저장하고 발급</button>
     </div>
   </div>
 </div>
@@ -787,9 +807,11 @@
   <div class="modal" style="max-width:640px;">
     <h2>👤 직원 정보 관리</h2>
     <div class="hint" style="margin-bottom:14px;">여기 등록해두면, 재직증명서 발급할 때 이름만 선택해서 바로 쓸 수 있어요.</div>
-    <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:var(--ink); margin-bottom:10px;">
-      <input type="checkbox" id="emp_hideResigned" checked onchange="renderEmployeeList()" style="width:auto;"> 퇴사자 숨기기
-    </label>
+    <div style="display:flex; gap:8px; margin-bottom:14px;" id="emp_groupChips">
+      <button type="button" class="chip active" data-group="active" onclick="setEmpGroup('active')">재직자</button>
+      <button type="button" class="chip" data-group="resigned" onclick="setEmpGroup('resigned')">퇴사자</button>
+      <button type="button" class="chip" data-group="all" onclick="setEmpGroup('all')">전체</button>
+    </div>
     <div id="employeeList" style="display:flex; flex-direction:column; gap:10px; max-height:320px; overflow-y:auto; margin-bottom:18px;"></div>
     <div style="border-top:1px solid var(--line); padding-top:16px;">
       <input type="hidden" id="emp_editId">
@@ -809,16 +831,6 @@
           <option value="해메체">해메체</option>
         </select>
       </div>
-      <div class="field"><label>연락처 (선택, 강사비 영수증 발급용)</label><input id="emp_contact" placeholder="예: 010-0000-0000"></div>
-      <div class="field"><label>계좌번호(은행) (선택, 강사비 영수증 발급용)</label><input id="emp_bankInfo" placeholder="예: 국민은행 000-00-0000000"></div>
-      <div class="field">
-        <label>도장 파일 (선택, 강사비 영수증 발급용)</label>
-        <div style="display:flex; gap:8px; align-items:center;">
-          <input type="file" id="emp_sealFile" accept="image/*" style="flex:1;">
-          <button type="button" class="icon-btn del" onclick="clearFileInput('emp_sealFile')">✕ 선택취소</button>
-        </div>
-        <div class="filerow" id="emp_seal_current"></div>
-      </div>
       <div class="field">
         <label style="display:flex; align-items:center; gap:8px; font-size:14px; color:var(--ink);">
           <input type="checkbox" id="emp_allowIssue" style="width:auto;"> 뷰어 발급 허용 (체크한 직원만 재직증명서 발급 목록에 뜸)
@@ -831,26 +843,6 @@
     </div>
     <div class="modal-actions">
       <button class="btn secondary" onclick="closeModal('employees')">닫기</button>
-    </div>
-  </div>
-</div>
-
-<!-- ===== 직원 강사비 영수증 발급 모달 ===== -->
-<div class="overlay" id="overlay-empReceipt">
-  <div class="modal">
-    <h2 id="modalTitle-empReceipt">강사비 영수증 발급</h2>
-    <div class="hint" style="margin-bottom:14px;" id="er_who"></div>
-    <input type="hidden" id="er_employeeId">
-    <input type="hidden" id="er_editId">
-    <div class="field"><label>주제 (건명: 해운대메이커센터 OO 수업)</label><input id="er_subject" placeholder="예: 목공"></div>
-    <div class="field"><label>금액</label><input id="er_amount" placeholder="예: 2,400,000원" oninput="formatAmountInput(this); updateEmpReceiptPreview();"></div>
-    <div class="field"><label>발행일자</label><input type="date" id="er_issueDate" min="1900-01-01" max="2099-12-31"></div>
-    <div class="field"><label>번호</label><input id="er_receiptNo" placeholder="자동 생성됨 (직접 수정 가능)"></div>
-    <div class="field" id="er_previewBox" style="background:var(--paper-2); border-radius:6px; padding:12px 14px; font-size:13px; line-height:1.8;"></div>
-    <div class="modal-actions">
-      <button class="btn secondary" onclick="closeModal('empReceipt')">취소</button>
-      <button class="btn secondary" id="er_saveOnlyBtn" onclick="saveEmpReceipt(false)">저장</button>
-      <button class="btn" id="er_saveBtn" onclick="saveEmpReceipt(true)">저장 및 발급</button>
     </div>
   </div>
 </div>
@@ -885,6 +877,7 @@
         <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="cert" style="width:auto;"> 🏅 자격·수상</label>
         <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="employ" style="width:auto;"> 🪪 재직증명서</label>
         <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="official" style="width:auto;"> 📋 공문 작성</label>
+        <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="career" style="width:auto;"> 📜 경력증명서</label>
         <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="employees" style="width:auto;"> 👤 직원 관리</label>
         <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="buildings" style="width:auto;"> 🏢 건물 관리</label>
         <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="tenants" style="width:auto;"> 🧑 입주자 관리</label>
@@ -953,13 +946,13 @@
 </div>
 
 <script>
-const KEYS = { contract:'gongplan_contracts_v1', docs:'gongplan_docs_v1', cert:'gongplan_certs_v1', employ:'gongplan_employ_v1', employees:'gongplan_employees_v1', official:'gongplan_official_v1', buildings:'gongplan_buildings_v1', lease:'gongplan_lease_v1', renewal:'gongplan_renewal_v1', tenants:'gongplan_tenants_v1', subdelegation:'gongplan_subdelegation_v1', movein:'gongplan_movein_v1', instructors:'gongplan_instructors_v1', receipts:'gongplan_receipts_v1', empReceipts:'gongplan_empreceipts_v1', salaryReceipts:'gongplan_salaryreceipts_v1' };
-let data = { contract:[], docs:[], cert:[], employ:[], employees:[], official:[], buildings:[], lease:[], renewal:[], tenants:[], subdelegation:[], movein:[], instructors:[], receipts:[], empReceipts:[], salaryReceipts:[], settings:{ viewerMode:false, allowedTabs:['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts'], company:{ name:'', ceo:'', address:'', bizNumber:'', issuerName:'', issuerPosition:'', hasSeal:false, hasLogo:false, hasLogo2:false } } };
+const KEYS = { contract:'gongplan_contracts_v1', docs:'gongplan_docs_v1', cert:'gongplan_certs_v1', employ:'gongplan_employ_v1', employees:'gongplan_employees_v1', official:'gongplan_official_v1', buildings:'gongplan_buildings_v1', lease:'gongplan_lease_v1', renewal:'gongplan_renewal_v1', tenants:'gongplan_tenants_v1', subdelegation:'gongplan_subdelegation_v1', movein:'gongplan_movein_v1', instructors:'gongplan_instructors_v1', receipts:'gongplan_receipts_v1', empReceipts:'gongplan_empreceipts_v1', salaryReceipts:'gongplan_salaryreceipts_v1', career:'gongplan_career_v1' };
+let data = { contract:[], docs:[], cert:[], employ:[], employees:[], official:[], buildings:[], lease:[], renewal:[], tenants:[], subdelegation:[], movein:[], instructors:[], receipts:[], empReceipts:[], salaryReceipts:[], career:[], settings:{ viewerMode:false, allowedTabs:['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career'], company:{ name:'', ceo:'', address:'', bizNumber:'', issuerName:'', issuerPosition:'', hasSeal:false, hasLogo:false, hasLogo2:false } } };
 let currentTab = 'contract';
 let currentCategory = 'docs_cat';
 const TAB_CATEGORY_MAP = {
   contract:'docs_cat', docs:'docs_cat', cert:'docs_cat',
-  employ:'issue_cat', official:'issue_cat',
+  employ:'issue_cat', official:'issue_cat', career:'issue_cat',
   leave:'hr_cat', comp:'hr_cat', workGP:'hr_cat', workHM:'hr_cat', employees:'hr_cat',
   movein:'ibagu_cat', lease:'ibagu_cat', renewal:'ibagu_cat', buildings:'ibagu_cat', tenants:'ibagu_cat', subdelegation:'ibagu_cat',
   receipts:'hame_cat', salaryReceipts:'hame_cat', instructors:'hame_cat'
@@ -1479,8 +1472,8 @@ function renderEmployeeFilterCheckboxes(){
   }
 
   const selectedEmployeeIds = getSelectedEmployeeSet(currentTab);
-  el.innerHTML = '<div style="font-size:12.5px; color:var(--mist); margin-bottom:6px;">표시할 인원 선택 (입사/퇴사 인원 반영)</div><div style="display:flex; flex-wrap:wrap; gap:12px;">' +
-    data.employees.map(e => `<label style="display:flex; align-items:center; gap:6px; font-size:13px;"><input type="checkbox" ${selectedEmployeeIds.has(e.id)?'checked':''} onchange="toggleLeaveEmployeeSelect('${e.id}', this.checked)" style="width:auto;">${escapeHtml(e.name)}${e.endDate ? ' <span style="color:var(--danger); font-size:11px;">(퇴사)</span>' : ''}</label>`).join('') +
+  el.innerHTML = '<div style="font-size:12.5px; color:var(--mist); margin-bottom:6px;">표시할 인원 선택 (입사 인원 반영, 퇴사자는 자동 제외)</div><div style="display:flex; flex-wrap:wrap; gap:12px;">' +
+    data.employees.filter(e => !e.endDate).map(e => `<label style="display:flex; align-items:center; gap:6px; font-size:13px;"><input type="checkbox" ${selectedEmployeeIds.has(e.id)?'checked':''} onchange="toggleLeaveEmployeeSelect('${e.id}', this.checked)" style="width:auto;">${escapeHtml(e.name)}</label>`).join('') +
     '</div>';
   el.style.display = 'block';
 }
@@ -1667,7 +1660,7 @@ function exportLeaveExcel(){
   if(typeof XLSX === 'undefined'){ alert('엑셀 라이브러리를 불러오지 못했어요. 인터넷 연결을 확인해주세요.'); return; }
   if(leaveEvents.length === 0){ alert('내보낼 데이터가 없어요. 먼저 일정을 불러와주세요.'); return; }
   const year = parseInt((document.getElementById('leaveYearSelect').value) || new Date().getFullYear(), 10);
-  const employees = data.employees;
+  const employees = data.employees.filter(e => !e.endDate);
   const monthHeaders = Array.from({length:12}, (_,i) => `${i+1}월`);
 
   function ledgerSheet(builderFn, accLabel){
@@ -1857,7 +1850,7 @@ async function saveSettings(){
 function applyRestrictions(){
   const loggedIn = sessionRole !== null;
   const restricted = isRestricted();
-  const allowed = restricted ? data.settings.allowedTabs : ['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts'];
+  const allowed = restricted ? data.settings.allowedTabs : ['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career'];
 
   // 세부탭: 권한 + 현재 카테고리 둘 다 만족해야 보임
   document.querySelectorAll('#tabsBar .tab-btn').forEach(btn=>{
@@ -1910,7 +1903,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 db.settings({ experimentalAutoDetectLongPolling: true, merge: true });
-const COLLECTIONS = { contract:'contracts', docs:'docs', cert:'certs', employ:'employment_certificates', employees:'employees', official:'official_docs', buildings:'buildings', lease:'lease_contracts', renewal:'renewal_requests', tenants:'tenants', subdelegation:'subdelegation_requests', movein:'movein_contracts', instructors:'instructors', receipts:'instructor_receipts', empReceipts:'employee_receipts', salaryReceipts:'instructor_salary_receipts' };
+const COLLECTIONS = { contract:'contracts', docs:'docs', cert:'certs', employ:'employment_certificates', employees:'employees', official:'official_docs', buildings:'buildings', lease:'lease_contracts', renewal:'renewal_requests', tenants:'tenants', subdelegation:'subdelegation_requests', movein:'movein_contracts', instructors:'instructors', receipts:'instructor_receipts', empReceipts:'employee_receipts', salaryReceipts:'instructor_salary_receipts', career:'career_certificates' };
 
 function updateSyncStatus(msg){
   document.getElementById('syncStatus').textContent = msg || '';
@@ -2008,6 +2001,12 @@ async function initFirebaseSync(){
     render();
   }, err => { console.error(err); updateSyncStatus('🔴 강사 영수증(월급) 동기화 실패: ' + err.message); });
 
+  db.collection('career_certificates').onSnapshot(snap => {
+    data.career = snap.docs.map(d => fixCareerItem(d.data()));
+    localStorage.setItem(KEYS.career, JSON.stringify(data.career));
+    render();
+  }, err => { console.error(err); updateSyncStatus('🔴 경력증명서 동기화 실패: ' + err.message); });
+
   db.collection('employee_receipts').onSnapshot(snap => {
     data.empReceipts = snap.docs.map(d => fixEmpReceiptItem(d.data()));
     localStorage.setItem(KEYS.empReceipts, JSON.stringify(data.empReceipts));
@@ -2034,7 +2033,7 @@ async function initFirebaseSync(){
   db.collection('settings').doc('main').onSnapshot(snap => {
     if(snap.exists){
       data.settings = snap.data();
-      if(!Array.isArray(data.settings.allowedTabs)) data.settings.allowedTabs = ['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts'];
+      if(!Array.isArray(data.settings.allowedTabs)) data.settings.allowedTabs = ['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career'];
       if(!data.settings.company) data.settings.company = { name:'', ceo:'', address:'', bizNumber:'', issuerName:'', issuerPosition:'', hasSeal:false, hasLogo:false, hasLogo2:false };
     }
     applyRestrictions();
@@ -2166,6 +2165,9 @@ function fixCertItem(item){
 function fixEmployItem(item){
   return { employeeId:'', name:'', rrn:'', address:'', position:'', hireDate:'', endDate:'', purpose:'재직증명', issueDate:'', ...item };
 }
+function fixCareerItem(item){
+  return { employeeId:'', name:'', rrn:'', address:'', position:'', hireDate:'', endDate:'', duty:'', issueDate:'', ...item };
+}
 function fixOfficialItem(item){
   return { docNo:'', effectiveDate:'', recipient:'', via:'', title:'', body:'', subItems:'', contact:'', ...item };
 }
@@ -2239,7 +2241,7 @@ function fixEmployeeItem(item){
 }
 
 function migrateData(d){
-  if(!d) return { contract:[], docs:[], cert:[], employ:[], employees:[], official:[], buildings:[], lease:[], renewal:[], tenants:[], subdelegation:[], movein:[], instructors:[], receipts:[], empReceipts:[], salaryReceipts:[] };
+  if(!d) return { contract:[], docs:[], cert:[], employ:[], employees:[], official:[], buildings:[], lease:[], renewal:[], tenants:[], subdelegation:[], movein:[], instructors:[], receipts:[], empReceipts:[], salaryReceipts:[], career:[] };
   d.contract = (d.contract||[]).map(fixContractItem);
   d.docs = (d.docs || d.education || []).map(fixDocItem);
   delete d.education;
@@ -2257,10 +2259,11 @@ function migrateData(d){
   d.receipts = (d.receipts||[]).map(fixReceiptItem);
   d.empReceipts = (d.empReceipts||[]).map(fixEmpReceiptItem);
   d.salaryReceipts = (d.salaryReceipts||[]).map(fixSalaryReceiptItem);
+  d.career = (d.career||[]).map(fixCareerItem);
   if(!d.settings || typeof d.settings !== 'object'){
-    d.settings = { viewerMode:false, allowedTabs:['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts'], company:{ name:'', ceo:'', address:'', bizNumber:'', issuerName:'', issuerPosition:'', hasSeal:false, hasLogo:false, hasLogo2:false } };
+    d.settings = { viewerMode:false, allowedTabs:['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career'], company:{ name:'', ceo:'', address:'', bizNumber:'', issuerName:'', issuerPosition:'', hasSeal:false, hasLogo:false, hasLogo2:false } };
   }
-  if(!Array.isArray(d.settings.allowedTabs)) d.settings.allowedTabs = ['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts'];
+  if(!Array.isArray(d.settings.allowedTabs)) d.settings.allowedTabs = ['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career'];
   d.settings.allowedTabs = d.settings.allowedTabs.map(t => t==='education' ? 'docs' : t);
   if(!d.settings.company) d.settings.company = { name:'', ceo:'', address:'', bizNumber:'', issuerName:'', issuerPosition:'', hasSeal:false, hasLogo:false, hasLogo2:false };
   return d;
@@ -2419,6 +2422,16 @@ function openModal(doc){
     document.getElementById('em_verify_field').style.display = sessionRole === 'viewer' ? 'block' : 'none';
     document.getElementById('em_verify_birth').value = '';
     previewEmployeeInfo();
+  } else if(tab==='career'){
+    const today = new Date().toISOString().slice(0,10);
+    document.getElementById('modalTitle-career').textContent = doc ? '경력증명서 재발급' : '경력증명서 발급';
+    document.getElementById('cr_editId').value = doc ? doc.id : '';
+    const crSel = document.getElementById('cr_employeeId');
+    crSel.innerHTML = data.employees.map(e => `<option value="${e.id}">${escapeHtml(e.name)}</option>`).join('');
+    if(doc && doc.employeeId){ crSel.value = doc.employeeId; }
+    document.getElementById('cr_duty').value = doc ? doc.duty : '';
+    document.getElementById('cr_issueDate').value = doc ? doc.issueDate : today;
+    previewCareerEmployeeInfo();
   } else if(tab==='official'){
     const today = new Date().toISOString().slice(0,10);
     document.getElementById('modalTitle-official').textContent = doc ? '공문 수정' : '공문 작성';
@@ -2723,6 +2736,118 @@ function previewEmployeeInfo(){
   const emp = data.employees.find(e => e.id === sel.value);
   const el = document.getElementById('em_preview');
   el.innerHTML = emp ? `선택됨: ${escapeHtml(emp.name)} (${escapeHtml(emp.position||'-')})` : '선택된 직원이 없습니다.';
+}
+
+function previewCareerEmployeeInfo(){
+  const sel = document.getElementById('cr_employeeId');
+  const emp = data.employees.find(e => e.id === sel.value);
+  const el = document.getElementById('cr_preview');
+  el.innerHTML = emp ? `선택됨: ${escapeHtml(emp.name)} (${escapeHtml(emp.position||'-')})` : '선택된 직원이 없습니다.';
+}
+
+function calcCareerPeriodText(hireDate, endDate){
+  if(!hireDate) return '';
+  const start = new Date(hireDate + 'T00:00:00');
+  const end = endDate ? new Date(endDate + 'T00:00:00') : new Date();
+  let years = end.getFullYear() - start.getFullYear();
+  const beforeAnniversary = (end.getMonth() < start.getMonth()) || (end.getMonth()===start.getMonth() && end.getDate() < start.getDate());
+  if(beforeAnniversary) years--;
+  if(years < 0) years = 0;
+  const startText = `${start.getFullYear()}년 ${String(start.getMonth()+1).padStart(2,'0')}월 ${String(start.getDate()).padStart(2,'0')}`;
+  return endDate
+    ? `${startText}부터 ~ ${formatKoreanDate(endDate)}까지 (${years}년)`
+    : `${startText}부터 ~ 현재까지 (${years}년)`;
+}
+
+async function saveCareer(){
+  const btn = document.getElementById('cr_saveBtn');
+  const employeeId = document.getElementById('cr_employeeId').value;
+  const emp = data.employees.find(x=>x.id===employeeId);
+  if(!emp){ alert('직원을 선택해주세요.'); return; }
+  btn.disabled = true;
+  const originalText = btn.textContent;
+  btn.textContent = '저장 중...';
+  const id = document.getElementById('cr_editId').value || ('cr-'+Date.now());
+  const doc = {
+    id,
+    employeeId,
+    name: emp.name,
+    rrn: emp.rrn,
+    address: emp.address,
+    position: emp.position,
+    hireDate: emp.hireDate,
+    endDate: emp.endDate,
+    duty: document.getElementById('cr_duty').value.trim(),
+    issueDate: document.getElementById('cr_issueDate').value || new Date().toISOString().slice(0,10),
+    updated: Date.now()
+  };
+  const idx = data.career.findIndex(d=>d.id===id);
+  if(idx>=0) data.career[idx]=doc; else data.career.push(doc);
+  cacheLocal('career');
+  const ok = await saveItemToFirestore('career', doc);
+  btn.disabled = false;
+  btn.textContent = originalText;
+  if(!ok) return;
+  closeModal('career');
+  render();
+  printCareerCertificate(doc);
+}
+
+function careerCertificateStyles(){
+  return `
+  body{ font-family:'Malgun Gothic','Noto Sans KR',sans-serif; padding:36px; color:#111; }
+  .career-frame{ border:2px solid #000; padding:26px 34px 40px; }
+  h1{ text-align:center; font-size:30px; letter-spacing:20px; margin:10px 0 30px; font-weight:800; }
+  table.career-table{ width:100%; border-collapse:collapse; table-layout:fixed; }
+  table.career-table td{ border:1px solid #333; padding:14px 16px; font-size:14.5px; vertical-align:middle; }
+  td.k-label{ text-align:center; background:#fff; font-weight:700; width:15%; }
+  td.k-value{ text-align:center; }
+  .stmt{ font-size:16px; line-height:2; margin:70px 0 20px; text-align:center; }
+  .issue-date{ text-align:center; font-size:15px; margin:30px 0; }
+  .company-block{ position:relative; text-align:center; font-size:26px; font-weight:800; margin:50px 0 20px; }
+  .seal{ position:absolute; width:80px; height:80px; opacity:0.9; top:-18px; margin-left:8px; }
+  @media print { body{ padding:20px; } }
+  `;
+}
+
+function careerCertificateBodyHTML(item, company, sealImg){
+  const periodText = calcCareerPeriodText(item.hireDate, item.endDate);
+  return `
+  <div class="career-frame">
+    <h1>경 력 증 명 서</h1>
+    <table class="career-table">
+      <tr><td class="k-label">성&nbsp;&nbsp;&nbsp;명</td><td class="k-value">${escapeHtml(item.name||'')}</td><td class="k-label">주민등록번호</td><td class="k-value">${escapeHtml(item.rrn||'')}</td></tr>
+      <tr><td class="k-label">주&nbsp;&nbsp;&nbsp;소</td><td class="k-value" colspan="3">${escapeHtml(item.address||'')}</td></tr>
+      <tr><td class="k-label">소&nbsp;&nbsp;&nbsp;속</td><td class="k-value">${escapeHtml(company.name||'')}</td><td class="k-label">직&nbsp;&nbsp;&nbsp;책</td><td class="k-value">${escapeHtml(item.position||'')}</td></tr>
+      <tr><td class="k-label">사업장 주소</td><td class="k-value" colspan="3">${escapeHtml(company.address||'')}</td></tr>
+      <tr><td class="k-label">전화번호</td><td class="k-value">${escapeHtml(company.phone||'')}</td><td class="k-label">담당업무</td><td class="k-value">${escapeHtml(item.duty||'')}</td></tr>
+      <tr><td class="k-label">재직기간</td><td class="k-value" colspan="3">${periodText}</td></tr>
+    </table>
+
+    <div class="stmt">위 사실이 틀림없음을 증명합니다.</div>
+    <div class="issue-date">${formatKoreanDate(item.issueDate)}</div>
+
+    <div class="company-block">
+      <span style="position:relative; display:inline-block;">
+        ${escapeHtml(company.name || '')}
+        ${sealImg ? `<img class="seal" src="${sealImg}" style="left:100%; margin-left:8px;">` : ' (인)'}
+      </span>
+    </div>
+  </div>`;
+}
+
+async function printCareerCertificate(item){
+  const company = data.settings.company || {};
+  const sealImg = await getSealImage(company);
+  const win = window.open('', '_blank');
+  win.document.write(`
+<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>경력증명서 - ${escapeHtml(item.name)}</title>
+<style>${careerCertificateStyles()}</style>
+</head><body>
+  ${careerCertificateBodyHTML(item, company, sealImg)}
+  <script>window.onload = () => window.print();<\/script>
+</body></html>`);
+  win.document.close();
 }
 function closeModal(tab){ document.getElementById('overlay-'+tab).classList.remove('open'); }
 
@@ -3377,95 +3502,6 @@ async function issueSalaryReceiptsBulk(){
   <script>window.onload = () => window.print();<\/script>
 </body></html>`);
   win.document.close();
-}
-
-function openEmpReceiptModal(emp){
-  document.getElementById('er_employeeId').value = emp.id;
-  document.getElementById('er_editId').value = '';
-  document.getElementById('er_who').textContent = `${emp.name}${emp.position ? ' · '+emp.position : ''} 님께 발급합니다. (연락처·계좌·도장은 직원 정보에서 자동으로 들어가요)`;
-  document.getElementById('er_subject').value = '';
-  document.getElementById('er_amount').value = '';
-  document.getElementById('er_issueDate').value = new Date().toISOString().slice(0,10);
-  document.getElementById('er_receiptNo').value = String(data.empReceipts.length + 1);
-  document.getElementById('er_previewBox').innerHTML = '금액을 입력하면 세금 계산 미리보기가 여기 나와요.';
-  document.getElementById('overlay-empReceipt').classList.add('open');
-}
-
-function updateEmpReceiptPreview(){
-  const amount = parseAmount(document.getElementById('er_amount').value);
-  const box = document.getElementById('er_previewBox');
-  if(!amount){ box.innerHTML = '금액을 입력하면 세금 계산 미리보기가 여기 나와요.'; return; }
-  const { incomeTax, localTax, totalWithholding, netAmount } = calcReceiptTax(amount);
-  box.innerHTML = `
-    사업소득세(3%) : ${incomeTax.toLocaleString('ko-KR')}원<br>
-    주민세 : ${localTax.toLocaleString('ko-KR')}원<br>
-    실원천징수액 계 : ${totalWithholding.toLocaleString('ko-KR')}원<br>
-    <b>실수령액(과세후) : ${netAmount.toLocaleString('ko-KR')}원</b>
-  `;
-}
-
-async function getEmployeeSealImage(doc){
-  if(!doc.hasSeal || !doc.employeeId) return null;
-  const file = await fetchFileBlob(doc.employeeId, 'seal');
-  return file ? file.dataUrl : null;
-}
-
-async function saveEmpReceipt(shouldPrint){
-  const btn = shouldPrint ? document.getElementById('er_saveBtn') : document.getElementById('er_saveOnlyBtn');
-  const otherBtn = shouldPrint ? document.getElementById('er_saveOnlyBtn') : document.getElementById('er_saveBtn');
-  const employeeId = document.getElementById('er_employeeId').value;
-  const emp = data.employees.find(x=>x.id===employeeId);
-  if(!emp){ alert('직원 정보를 찾을 수 없어요.'); return; }
-  const amount = parseAmount(document.getElementById('er_amount').value);
-  if(!amount){ alert('금액을 입력해주세요.'); return; }
-  btn.disabled = true; otherBtn.disabled = true;
-  const originalText = btn.textContent;
-  btn.textContent = '저장 중...';
-
-  const id = document.getElementById('er_editId').value || ('er-'+Date.now());
-  const doc = {
-    id,
-    employeeId,
-    name: emp.name,
-    rrn: emp.rrn,
-    address: emp.address,
-    affiliation: emp.team || (data.settings.company.name || ''),
-    position: emp.position,
-    contact: emp.contact,
-    bankInfo: emp.bankInfo,
-    hasSeal: !!emp.hasSeal,
-    subject: document.getElementById('er_subject').value.trim(),
-    amount,
-    issueDate: document.getElementById('er_issueDate').value || new Date().toISOString().slice(0,10),
-    receiptNo: document.getElementById('er_receiptNo').value.trim(),
-    updated: Date.now()
-  };
-  const idx = data.empReceipts.findIndex(d=>d.id===id);
-  if(idx>=0) data.empReceipts[idx]=doc; else data.empReceipts.push(doc);
-  cacheLocal('empReceipts');
-  const ok = await saveItemToFirestore('empReceipts', doc);
-  btn.disabled = false; otherBtn.disabled = false;
-  btn.textContent = originalText;
-  if(!ok) return;
-  closeModal('empReceipt');
-  if(shouldPrint) await printEmpReceipt(doc);
-}
-
-async function printEmpReceipt(doc){
-  const sealImg = await getEmployeeSealImage(doc);
-  const win = window.open('', '_blank');
-  win.document.write(`
-<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>영수증_${escapeHtml(doc.name)}</title>
-<style>${receiptStyles()}</style>
-</head><body>
-  ${receiptBodyHTML(doc, sealImg)}
-</body></html>`);
-  win.document.close();
-  if(sealImg){
-    const img = win.document.querySelector('.receipt-seal');
-    if(img){ await waitImgLoad(img); }
-  }
-  win.print();
 }
 
 async function saveMovein(shouldPrint){
@@ -4235,13 +4271,25 @@ function openEmployeeManager(){
   renderEmployeeList();
 }
 
+let empGroupFilter = 'active';
+
+function setEmpGroup(group){
+  empGroupFilter = group;
+  document.querySelectorAll('#emp_groupChips .chip').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.group === group);
+  });
+  renderEmployeeList();
+}
+
 function renderEmployeeList(){
   const el = document.getElementById('employeeList');
   if(!el) return;
-  const hideResigned = document.getElementById('emp_hideResigned').checked;
-  const list = hideResigned ? data.employees.filter(e => !e.endDate) : data.employees.slice();
+  const list = empGroupFilter === 'all' ? data.employees.slice()
+    : empGroupFilter === 'resigned' ? data.employees.filter(e => e.endDate)
+    : data.employees.filter(e => !e.endDate);
   if(list.length===0){
-    el.innerHTML = `<div class="empty" style="padding:20px;">${hideResigned && data.employees.length>0 ? '재직중인 직원이 없습니다. (퇴사자 숨기기 해제하면 볼 수 있어요)' : '등록된 직원이 없습니다.'}</div>`;
+    const emptyMsg = empGroupFilter === 'resigned' ? '퇴사자가 없습니다.' : empGroupFilter === 'active' ? '재직중인 직원이 없습니다.' : '등록된 직원이 없습니다.';
+    el.innerHTML = `<div class="empty" style="padding:20px;">${emptyMsg}</div>`;
     return;
   }
   el.innerHTML = list.map(e => `
@@ -4254,7 +4302,6 @@ function renderEmployeeList(){
         </div>
       </div>
       <div style="display:flex; gap:6px;">
-        <button class="icon-btn" onclick='openEmpReceiptModal(${JSON.stringify(e).replace(/'/g,"&#39;")})'>💰 영수증 발급</button>
         <button class="icon-btn" onclick='editEmployeeForm(${JSON.stringify(e).replace(/'/g,"&#39;")})'>수정</button>
         <button class="icon-btn del" onclick="deleteEmployee('${e.id}')">삭제</button>
       </div>
@@ -4281,10 +4328,6 @@ function resetEmployeeForm(){
   document.getElementById('emp_position').value = '';
   document.getElementById('emp_openingBalance').value = '';
   document.getElementById('emp_team').value = '';
-  document.getElementById('emp_contact').value = '';
-  document.getElementById('emp_bankInfo').value = '';
-  document.getElementById('emp_sealFile').value = '';
-  document.getElementById('emp_seal_current').innerHTML = '등록된 도장 없음';
   document.getElementById('emp_allowIssue').checked = false;
   document.getElementById('emp_saveBtn').textContent = '직원 추가';
   document.getElementById('emp_cancelEditBtn').style.display = 'none';
@@ -4301,10 +4344,6 @@ function editEmployeeForm(emp){
   document.getElementById('emp_position').value = emp.position;
   document.getElementById('emp_openingBalance').value = emp.openingBalance || '';
   document.getElementById('emp_team').value = emp.team || '';
-  document.getElementById('emp_contact').value = emp.contact || '';
-  document.getElementById('emp_bankInfo').value = emp.bankInfo || '';
-  document.getElementById('emp_sealFile').value = '';
-  document.getElementById('emp_seal_current').innerHTML = emp.hasSeal ? `등록된 도장 있음 <button type="button" onclick="removeEmployeeSeal('${emp.id}')" class="icon-btn del" style="margin-left:6px;">🗑 삭제</button>` : '등록된 도장 없음';
   document.getElementById('emp_allowIssue').checked = !!emp.allowIssue;
   document.getElementById('emp_saveBtn').textContent = '수정 저장';
   document.getElementById('emp_cancelEditBtn').style.display = 'inline-block';
@@ -4317,11 +4356,6 @@ async function saveEmployee(){
   btn.disabled = true;
   const id = document.getElementById('emp_editId').value || ('emp-'+Date.now());
   const existing = data.employees.find(d=>d.id===id) || {};
-  const sealFile = await readFileAsData(document.getElementById('emp_sealFile'));
-  if(sealFile){
-    const ok = await saveFileBlob(id, 'seal', sealFile);
-    if(!ok){ btn.disabled = false; return; }
-  }
   const emp = {
     ...existing,
     id,
@@ -4334,9 +4368,6 @@ async function saveEmployee(){
     position: document.getElementById('emp_position').value.trim(),
     openingBalance: parseFloat(document.getElementById('emp_openingBalance').value) || 0,
     team: document.getElementById('emp_team').value,
-    contact: document.getElementById('emp_contact').value.trim(),
-    bankInfo: document.getElementById('emp_bankInfo').value.trim(),
-    hasSeal: sealFile ? true : !!existing.hasSeal,
     allowIssue: document.getElementById('emp_allowIssue').checked,
     updated: Date.now()
   };
@@ -4348,17 +4379,6 @@ async function saveEmployee(){
   resetEmployeeForm();
   renderEmployeeList();
   render();
-}
-
-async function removeEmployeeSeal(id){
-  if(!confirm('도장 이미지를 삭제할까요?')) return;
-  await deleteFileBlob(id, 'seal');
-  const emp = data.employees.find(d=>d.id===id);
-  if(emp){
-    emp.hasSeal = false;
-    await saveItemToFirestore('employees', emp);
-  }
-  document.getElementById('emp_seal_current').innerHTML = '등록된 도장 없음';
 }
 
 async function deleteEmployee(id){
@@ -4704,6 +4724,7 @@ function render(){
     if(currentTab==='cert') hay = [d.name,d.issuer,d.notes].join(' ');
     if(currentTab==='employ') hay = [d.name,d.position,d.purpose].join(' ');
     if(currentTab==='official') hay = [d.docNo,d.title,d.recipient,d.body].join(' ');
+    if(currentTab==='career') hay = [d.name,d.duty].join(' ');
     if(currentTab==='employees') hay = [d.name,d.position,d.code,d.team].join(' ');
     if(currentTab==='buildings') hay = [d.name,d.address,d.area,d.notes].join(' ');
     if(currentTab==='tenants') hay = [d.companyName,d.repName,d.address,d.contact].join(' ');
@@ -4768,6 +4789,9 @@ function render(){
     if(currentTab==='official'){
       if(sort==='name') return (a.title||'').localeCompare(b.title||'','ko');
       if(sort==='recipient') return (a.recipient||'').localeCompare(b.recipient||'','ko');
+    }
+    if(currentTab==='career'){
+      if(sort==='name') return (a.name||'').localeCompare(b.name||'','ko');
     }
     if(currentTab==='employees'){
       if(sort==='name') return (a.name||'').localeCompare(b.name||'','ko');
@@ -4898,6 +4922,19 @@ function render(){
           <button class="icon-btn" onclick='printOfficialDocument(${JSON.stringify(d).replace(/'/g,"&#39;")})'>🖨 재발급/인쇄</button>
           ${!isRestricted() ? `<button class="icon-btn" onclick='openModal(${JSON.stringify(d).replace(/'/g,"&#39;")})'>수정</button>
           <button class="icon-btn del" onclick="deleteItem('official','${d.id}')">삭제</button>` : ''}
+        </div>
+      </div>`).join('') + '</div>';
+  } else if(currentTab==='career'){
+    content.innerHTML = '<div class="grid">' + items.map(d => `
+      <div class="card">
+        <div class="meta">${escapeHtml(d.issueDate || '-')}</div>
+        <h3>${escapeHtml(d.name)}</h3>
+        <div class="meta">${escapeHtml(d.position || '-')}${d.duty ? ' · '+escapeHtml(d.duty) : ''}</div>
+        <div class="notes">${calcCareerPeriodText(d.hireDate, d.endDate)}</div>
+        <div class="card-actions">
+          <button class="icon-btn" onclick='printCareerCertificate(${JSON.stringify(d).replace(/'/g,"&#39;")})'>🖨 재발급/인쇄</button>
+          ${!isRestricted() ? `<button class="icon-btn" onclick='openModal(${JSON.stringify(d).replace(/'/g,"&#39;")})'>수정</button>
+          <button class="icon-btn del" onclick="deleteItem('career','${d.id}')">삭제</button>` : ''}
         </div>
       </div>`).join('') + '</div>';
   } else if(currentTab==='employees'){
@@ -5076,6 +5113,7 @@ function renderSortOptions(){
   if(currentTab==='cert') opts = [['recent','최근수정순'],['name','이름순'],['kind','구분순'],['issuer','인원순']];
   if(currentTab==='employ') opts = [['recent','최근발급순'],['issueDate_desc','발급일순'],['name','이름순']];
   if(currentTab==='official') opts = [['recent','최근발급순'],['name','제목순'],['recipient','수신처순']];
+  if(currentTab==='career') opts = [['recent','최근발급순'],['name','성명순']];
   if(currentTab==='employees') opts = [['recent','최근수정순'],['name','이름순']];
   if(currentTab==='buildings') opts = [['recent','최근수정순'],['name','이름순']];
   if(currentTab==='tenants') opts = [['recent','최근수정순'],['name','회사명순']];
