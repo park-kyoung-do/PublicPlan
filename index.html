@@ -557,7 +557,8 @@
       <select id="rc_instructorSelect" onchange="applyReceiptInstructor()"><option value="">선택하세요</option></select>
     </div>
     <div class="field"><label>주제 (건명: 해운대메이커센터 OO 수업)</label><input id="rc_subject" placeholder="예: 목공"></div>
-    <div class="field"><label>금액</label><input id="rc_amount" placeholder="예: 2,400,000원" oninput="formatAmountInput(this); updateReceiptPreview();"></div>
+    <div class="field"><label>일수 (1일 200,000원 기준)</label><input type="number" id="rc_days" placeholder="예: 3" min="0" step="1" oninput="updateReceiptPreview()"></div>
+    <div class="field" id="rc_amountDisplay" style="font-size:13px; color:var(--mist);"></div>
     <div class="field"><label>발행일자</label><input type="date" id="rc_issueDate" min="1900-01-01" max="2099-12-31" onchange="updateReceiptPreview()"></div>
     <div class="field">
       <label>난이도 (문서에는 표시 안 됨, 필터용)</label>
@@ -2205,7 +2206,7 @@ function fixInstructorItem(item){
 function fixReceiptItem(item){
   return {
     instructorId:'', name:'', rrn:'', address:'', affiliation:'', position:'', contact:'', bankInfo:'', hasSeal:false,
-    subject:'', amount:'', issueDate:'', level:'', receiptNo:'', receiptType:'session', ...item
+    subject:'', days:'', amount:'', issueDate:'', level:'', receiptNo:'', receiptType:'session', ...item
   };
 }
 function fixSalaryReceiptItem(item){
@@ -2484,7 +2485,7 @@ function openModal(doc){
     populateReceiptInstructorSelect();
     document.getElementById('rc_instructorSelect').value = doc ? (doc.instructorId || '') : '';
     document.getElementById('rc_subject').value = doc ? doc.subject : '';
-    document.getElementById('rc_amount').value = doc ? doc.amount : '';
+    document.getElementById('rc_days').value = doc ? doc.days : '';
     document.getElementById('rc_issueDate').value = doc ? doc.issueDate : today;
     document.getElementById('rc_level').value = doc ? doc.level : '';
     document.getElementById('rc_receiptNo').value = doc ? doc.receiptNo : String(data.receipts.length + 1);
@@ -3249,11 +3250,19 @@ function applyReceiptInstructor(){
   updateReceiptPreview();
 }
 
+const RECEIPT_DAILY_RATE = 200000;
+
 function updateReceiptPreview(){
-  const amountRaw = document.getElementById('rc_amount').value;
-  const amount = parseAmount(amountRaw);
+  const days = parseFloat(document.getElementById('rc_days').value) || 0;
+  const amount = Math.round(days * RECEIPT_DAILY_RATE);
+  const amountBox = document.getElementById('rc_amountDisplay');
   const box = document.getElementById('rc_previewBox');
-  if(!amount){ box.innerHTML = '금액을 입력하면 세금 계산 미리보기가 여기 나와요.'; return; }
+  if(!amount){
+    amountBox.innerHTML = '';
+    box.innerHTML = '일수를 입력하면 금액과 세금 계산 미리보기가 여기 나와요.';
+    return;
+  }
+  amountBox.innerHTML = `금액 : <b>${amount.toLocaleString('ko-KR')}원</b> (${days}일 × 200,000원)`;
   const { incomeTax, localTax, totalWithholding, netAmount } = calcReceiptTax(amount);
   box.innerHTML = `
     사업소득세(3%) : ${incomeTax.toLocaleString('ko-KR')}원<br>
@@ -3268,8 +3277,9 @@ async function saveReceipt(shouldPrint){
   const otherBtn = shouldPrint ? document.getElementById('rc_saveOnlyBtn') : document.getElementById('rc_saveBtn');
   const instructorId = document.getElementById('rc_instructorSelect').value;
   if(!instructorId){ alert('선생님을 선택해주세요.'); return; }
-  const amount = parseAmount(document.getElementById('rc_amount').value);
-  if(!amount){ alert('금액을 입력해주세요.'); return; }
+  const days = parseFloat(document.getElementById('rc_days').value) || 0;
+  const amount = Math.round(days * RECEIPT_DAILY_RATE);
+  if(!amount){ alert('일수를 입력해주세요.'); return; }
   btn.disabled = true; otherBtn.disabled = true;
   const originalText = btn.textContent;
   btn.textContent = '저장 중...';
@@ -3292,6 +3302,7 @@ async function saveReceipt(shouldPrint){
     bankInfo: ins ? ins.bankInfo : '',
     hasSeal: ins ? !!ins.hasSeal : false,
     subject: document.getElementById('rc_subject').value.trim(),
+    days,
     amount,
     issueDate: document.getElementById('rc_issueDate').value || new Date().toISOString().slice(0,10),
     level: document.getElementById('rc_level').value,
@@ -3342,7 +3353,12 @@ function receiptBodyHTML(doc, sealImg){
 
 function docTitle(doc){
   if(doc.receiptType==='salary'){
-    const monthLabel = doc.issueDate ? doc.issueDate.slice(0,7).replace('-','년 ')+'월' : '';
+    let monthLabel = '';
+    if(doc.issueDate){
+      const d = new Date(doc.issueDate + 'T00:00:00');
+      d.setMonth(d.getMonth() - 1); // 발행월의 전월 급여 (7월 발급 = 6월 급여)
+      monthLabel = `${d.getFullYear()}년 ${d.getMonth()+1}월`;
+    }
     return `해운대메이커센터 ${monthLabel} 강사료`;
   }
   return `해운대메이커센터 ${doc.subject || ''} 수업`;
@@ -3435,10 +3451,10 @@ function openSalaryReceiptModal(){
     el.innerHTML = '<div style="font-size:12.5px; color:var(--mist);">월급이 등록된 강사가 없어요. "강사 관리"에서 월급을 먼저 입력해주세요.</div>';
   } else {
     el.innerHTML = list.map(i => `
-      <label style="display:flex; align-items:center; gap:10px; font-size:13.5px; padding:6px 4px;">
+      <label style="display:flex; align-items:center; gap:10px; font-size:13.5px; padding:8px 10px; border-radius:4px; background:var(--paper-2);">
         <input type="checkbox" class="sr-check" value="${i.id}" style="width:auto;">
         <span style="flex:1;">${escapeHtml(i.name)}${i.subject ? ' ('+escapeHtml(i.subject)+')' : ''}</span>
-        <span class="mono" style="color:var(--gold-deep);">${escapeHtml(i.salary)}</span>
+        <span style="font-size:15px; font-weight:700; color:var(--navy);">${escapeHtml(i.salary)}</span>
       </label>
     `).join('');
   }
