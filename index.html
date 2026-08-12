@@ -561,13 +561,14 @@
     <div class="field" id="rc_amountDisplay" style="font-size:13px; color:var(--mist);"></div>
     <div class="field"><label>발행일자</label><input type="date" id="rc_issueDate" min="1900-01-01" max="2099-12-31" onchange="updateReceiptPreview()"></div>
     <div class="field">
-      <label>난이도 (문서에는 표시 안 됨, 필터용)</label>
+      <label>구분 (문서에는 표시 안 됨, 필터용)</label>
       <select id="rc_level">
         <option value="">미지정</option>
         <option value="기초">기초</option>
         <option value="초급">초급</option>
         <option value="중급">중급</option>
         <option value="고급">고급</option>
+        <option value="토요 메이커">토요 메이커</option>
       </select>
     </div>
     <div class="field"><label>번호</label><input id="rc_receiptNo" placeholder="자동 생성됨 (직접 수정 가능)"></div>
@@ -5154,7 +5155,7 @@ function renderChips(){
   if(currentTab==='cert') vals = vals.concat(['cert','award','agreement'], [...new Set(data.cert.map(d=>d.issuer).filter(Boolean))]);
   if(currentTab==='official') vals = vals.concat([...new Set(data.official.map(d=>d.recipient).filter(Boolean))]);
   if(currentTab==='employ') vals = vals.concat([...new Set(data.employ.map(d=>d.name).filter(Boolean))]);
-  if(currentTab==='receipts') vals = vals.concat(['기초','초급','중급','고급']);
+  if(currentTab==='receipts') vals = vals.concat(['기초','초급','중급','고급','토요 메이커']);
   chipEl.innerHTML = vals.map(v => {
     let label = v;
     if(currentTab==='cert'){ label = v==='cert'?'자격/인증': v==='award'?'수상': v==='agreement'?'협약': v==='전체'?'전체':'👤 '+v; }
