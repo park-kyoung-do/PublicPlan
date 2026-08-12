@@ -8,6 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
 <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 <style>
   :root{
@@ -1905,6 +1906,19 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 db.settings({ experimentalAutoDetectLongPolling: true, merge: true });
+const auth = firebase.auth();
+
+function ensureFirebaseAuth(){
+  return new Promise((resolve) => {
+    auth.onAuthStateChanged(user => {
+      if(user){ resolve(user); return; }
+      auth.signInAnonymously().catch(e => {
+        console.error('익명 로그인 실패', e);
+        updateSyncStatus('🔴 로그인 실패: ' + e.message);
+      });
+    });
+  });
+}
 const COLLECTIONS = { contract:'contracts', docs:'docs', cert:'certs', employ:'employment_certificates', employees:'employees', official:'official_docs', buildings:'buildings', lease:'lease_contracts', renewal:'renewal_requests', tenants:'tenants', subdelegation:'subdelegation_requests', movein:'movein_contracts', instructors:'instructors', receipts:'instructor_receipts', empReceipts:'employee_receipts', salaryReceipts:'instructor_salary_receipts', career:'career_certificates' };
 
 function updateSyncStatus(msg){
@@ -2059,7 +2073,12 @@ async function saveItemToFirestore(tabKey, item){
 async function deleteItemFromFirestore(tabKey, id){
   try{
     await db.collection(COLLECTIONS[tabKey]).doc(id).delete();
-  }catch(e){ console.error('Firebase 삭제 실패', e); }
+    return true;
+  }catch(e){
+    console.error('Firebase 삭제 실패', e);
+    alert('서버에서 삭제하지 못했어요. 화면에서는 지워졌지만, 새로고침하면 다시 나타날 수 있어요.\n(권한 문제 또는 네트워크 문제일 수 있어요)\n' + e.message);
+    return false;
+  }
 }
 
 // ---- 첨부파일 blob 전용 저장소 (문서 하나당 파일 하나, 텍스트와 완전 분리) ----
@@ -4531,12 +4550,23 @@ async function printBulkCertificates(items){
 
 async function deleteItem(tab, id){
   if(!confirm('삭제할까요?')) return;
+  const removed = data[tab].find(d=>d.id===id);
+  const removedIdx = data[tab].findIndex(d=>d.id===id);
   data[tab] = data[tab].filter(d=>d.id!==id);
   cacheLocal(tab);
-  await deleteItemFromFirestore(tab, id);
+  render();
+  const ok = await deleteItemFromFirestore(tab, id);
+  if(!ok){
+    // 서버 삭제 실패: 화면에 되돌려놓아 서버와 불일치 상태가 되지 않게 함
+    if(removed){
+      data[tab].splice(Math.min(removedIdx, data[tab].length), 0, removed);
+      cacheLocal(tab);
+      render();
+    }
+    return;
+  }
   const slots = tab==='contract' ? ['contract','tax','cert'] : ['main'];
   await Promise.all(slots.map(slot => deleteFileBlob(id, slot)));
-  render();
 }
 
 function exportData(){
@@ -5171,7 +5201,7 @@ function renderChips(){
 function setChip(v){ activeChip = v; render(); }
 
 loadAll();
-initFirebaseSync();
+ensureFirebaseAuth().then(() => initFirebaseSync());
 updateLoginUI();
 </script>
 
