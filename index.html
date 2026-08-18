@@ -216,6 +216,7 @@
     <button class="tab-btn" data-tab="workGP" data-cat="hr_cat" onclick="setTab('workGP')">🗓 빈시간(공공플랜)</button>
     <button class="tab-btn" data-tab="workHM" data-cat="hr_cat" onclick="setTab('workHM')">🗓 빈시간(해메체)</button>
     <button class="tab-btn" data-tab="employees" data-cat="hr_cat" onclick="setTab('employees')">👤 직원 관리</button>
+    <button class="tab-btn" data-tab="rules" data-cat="hr_cat" onclick="setTab('rules')">📖 사내 규정</button>
     <button class="tab-btn" data-tab="movein" data-cat="ibagu_cat" onclick="setTab('movein')">🏠 입주계약서</button>
     <button class="tab-btn" data-tab="lease" data-cat="ibagu_cat" onclick="setTab('lease')">📜 임대차계약서</button>
     <button class="tab-btn" data-tab="renewal" data-cat="ibagu_cat" onclick="setTab('renewal')">📝 입주계약연장신청서</button>
@@ -519,6 +520,21 @@
   </div>
 </div>
 
+<!-- ===== 사내 규정 모달 ===== -->
+<div class="overlay" id="overlay-rules">
+  <div class="modal">
+    <h2 id="modalTitle-rules">사내 규정 추가</h2>
+    <input type="hidden" id="rl_editId">
+    <div class="field"><label>제목</label><input id="rl_title" placeholder="예: 연차 관련 규칙"></div>
+    <div class="field"><label>분류 (선택, 필터용)</label><input id="rl_category" placeholder="예: 근태, 복지, 업무 등"></div>
+    <div class="field"><label>내용</label><textarea id="rl_content" style="min-height:160px;" placeholder="예: 연차는 입사일 기준으로 매월 1.25일씩 발생하며, 사용 시 최소 3일 전 팀장 승인을 받아야 합니다."></textarea></div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeModal('rules')">취소</button>
+      <button class="btn" id="rl_saveBtn" onclick="saveRule()">저장</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== 강사 관리 모달 ===== -->
 <div class="overlay" id="overlay-instructors">
   <div class="modal">
@@ -559,6 +575,7 @@
     </div>
     <div class="field"><label>주제 (건명: 해운대메이커센터 OO 수업)</label><input id="rc_subject" placeholder="예: 목공"></div>
     <div class="field"><label>일수 (1일 200,000원 기준)</label><input type="number" id="rc_days" placeholder="예: 3" min="0" step="1" oninput="updateReceiptPreview()"></div>
+    <div class="field"><label>시간 (1시간 40,000원 기준, 토요메이커데이 등 시간제용)</label><input type="number" id="rc_hours" placeholder="예: 2" min="0" step="0.5" oninput="updateReceiptPreview()"></div>
     <div class="field" id="rc_amountDisplay" style="font-size:13px; color:var(--mist);"></div>
     <div class="field"><label>발행일자</label><input type="date" id="rc_issueDate" min="1900-01-01" max="2099-12-31" onchange="updateReceiptPreview()"></div>
     <div class="field">
@@ -882,6 +899,7 @@
         <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="official" style="width:auto;"> 📋 공문 작성</label>
         <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="career" style="width:auto;"> 📜 경력증명서</label>
         <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="employees" style="width:auto;"> 👤 직원 관리</label>
+        <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="rules" style="width:auto;"> 📖 사내 규정</label>
         <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="buildings" style="width:auto;"> 🏢 건물 관리</label>
         <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="tenants" style="width:auto;"> 🧑 입주자 관리</label>
         <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="movein" style="width:auto;"> 🏠 입주계약서</label>
@@ -949,14 +967,14 @@
 </div>
 
 <script>
-const KEYS = { contract:'gongplan_contracts_v1', docs:'gongplan_docs_v1', cert:'gongplan_certs_v1', employ:'gongplan_employ_v1', employees:'gongplan_employees_v1', official:'gongplan_official_v1', buildings:'gongplan_buildings_v1', lease:'gongplan_lease_v1', renewal:'gongplan_renewal_v1', tenants:'gongplan_tenants_v1', subdelegation:'gongplan_subdelegation_v1', movein:'gongplan_movein_v1', instructors:'gongplan_instructors_v1', receipts:'gongplan_receipts_v1', empReceipts:'gongplan_empreceipts_v1', salaryReceipts:'gongplan_salaryreceipts_v1', career:'gongplan_career_v1' };
-let data = { contract:[], docs:[], cert:[], employ:[], employees:[], official:[], buildings:[], lease:[], renewal:[], tenants:[], subdelegation:[], movein:[], instructors:[], receipts:[], empReceipts:[], salaryReceipts:[], career:[], settings:{ viewerMode:false, allowedTabs:['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career'], company:{ name:'', ceo:'', address:'', bizNumber:'', issuerName:'', issuerPosition:'', hasSeal:false, hasLogo:false, hasLogo2:false } } };
+const KEYS = { contract:'gongplan_contracts_v1', docs:'gongplan_docs_v1', cert:'gongplan_certs_v1', employ:'gongplan_employ_v1', employees:'gongplan_employees_v1', official:'gongplan_official_v1', buildings:'gongplan_buildings_v1', lease:'gongplan_lease_v1', renewal:'gongplan_renewal_v1', tenants:'gongplan_tenants_v1', subdelegation:'gongplan_subdelegation_v1', movein:'gongplan_movein_v1', instructors:'gongplan_instructors_v1', receipts:'gongplan_receipts_v1', empReceipts:'gongplan_empreceipts_v1', salaryReceipts:'gongplan_salaryreceipts_v1', career:'gongplan_career_v1', rules:'gongplan_rules_v1' };
+let data = { contract:[], docs:[], cert:[], employ:[], employees:[], official:[], buildings:[], lease:[], renewal:[], tenants:[], subdelegation:[], movein:[], instructors:[], receipts:[], empReceipts:[], salaryReceipts:[], career:[], rules:[], settings:{ viewerMode:false, allowedTabs:['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career','rules'], company:{ name:'', ceo:'', address:'', bizNumber:'', issuerName:'', issuerPosition:'', hasSeal:false, hasLogo:false, hasLogo2:false } } };
 let currentTab = 'contract';
 let currentCategory = 'docs_cat';
 const TAB_CATEGORY_MAP = {
   contract:'docs_cat', docs:'docs_cat', cert:'docs_cat',
   employ:'issue_cat', official:'issue_cat', career:'issue_cat',
-  leave:'hr_cat', comp:'hr_cat', workGP:'hr_cat', workHM:'hr_cat', employees:'hr_cat',
+  leave:'hr_cat', comp:'hr_cat', workGP:'hr_cat', workHM:'hr_cat', employees:'hr_cat', rules:'hr_cat',
   movein:'ibagu_cat', lease:'ibagu_cat', renewal:'ibagu_cat', buildings:'ibagu_cat', tenants:'ibagu_cat', subdelegation:'ibagu_cat',
   receipts:'hame_cat', salaryReceipts:'hame_cat', instructors:'hame_cat'
 };
@@ -1853,7 +1871,7 @@ async function saveSettings(){
 function applyRestrictions(){
   const loggedIn = sessionRole !== null;
   const restricted = isRestricted();
-  const allowed = restricted ? data.settings.allowedTabs : ['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career'];
+  const allowed = restricted ? data.settings.allowedTabs : ['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career','rules'];
 
   // 세부탭: 권한 + 현재 카테고리 둘 다 만족해야 보임
   document.querySelectorAll('#tabsBar .tab-btn').forEach(btn=>{
@@ -1919,7 +1937,7 @@ function ensureFirebaseAuth(){
     });
   });
 }
-const COLLECTIONS = { contract:'contracts', docs:'docs', cert:'certs', employ:'employment_certificates', employees:'employees', official:'official_docs', buildings:'buildings', lease:'lease_contracts', renewal:'renewal_requests', tenants:'tenants', subdelegation:'subdelegation_requests', movein:'movein_contracts', instructors:'instructors', receipts:'instructor_receipts', empReceipts:'employee_receipts', salaryReceipts:'instructor_salary_receipts', career:'career_certificates' };
+const COLLECTIONS = { contract:'contracts', docs:'docs', cert:'certs', employ:'employment_certificates', employees:'employees', official:'official_docs', buildings:'buildings', lease:'lease_contracts', renewal:'renewal_requests', tenants:'tenants', subdelegation:'subdelegation_requests', movein:'movein_contracts', instructors:'instructors', receipts:'instructor_receipts', empReceipts:'employee_receipts', salaryReceipts:'instructor_salary_receipts', career:'career_certificates', rules:'company_rules' };
 
 function updateSyncStatus(msg){
   document.getElementById('syncStatus').textContent = msg || '';
@@ -2023,6 +2041,12 @@ async function initFirebaseSync(){
     render();
   }, err => { console.error(err); updateSyncStatus('🔴 경력증명서 동기화 실패: ' + err.message); });
 
+  db.collection('company_rules').onSnapshot(snap => {
+    data.rules = snap.docs.map(d => fixRuleItem(d.data()));
+    localStorage.setItem(KEYS.rules, JSON.stringify(data.rules));
+    render();
+  }, err => { console.error(err); updateSyncStatus('🔴 사내 규정 동기화 실패: ' + err.message); });
+
   db.collection('employee_receipts').onSnapshot(snap => {
     data.empReceipts = snap.docs.map(d => fixEmpReceiptItem(d.data()));
     localStorage.setItem(KEYS.empReceipts, JSON.stringify(data.empReceipts));
@@ -2049,7 +2073,7 @@ async function initFirebaseSync(){
   db.collection('settings').doc('main').onSnapshot(snap => {
     if(snap.exists){
       data.settings = snap.data();
-      if(!Array.isArray(data.settings.allowedTabs)) data.settings.allowedTabs = ['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career'];
+      if(!Array.isArray(data.settings.allowedTabs)) data.settings.allowedTabs = ['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career','rules'];
       if(!data.settings.company) data.settings.company = { name:'', ceo:'', address:'', bizNumber:'', issuerName:'', issuerPosition:'', hasSeal:false, hasLogo:false, hasLogo2:false };
     }
     applyRestrictions();
@@ -2189,6 +2213,9 @@ function fixEmployItem(item){
 function fixCareerItem(item){
   return { employeeId:'', name:'', rrn:'', address:'', position:'', hireDate:'', endDate:'', duty:'', issueDate:'', ...item };
 }
+function fixRuleItem(item){
+  return { title:'', category:'', content:'', ...item };
+}
 function fixOfficialItem(item){
   return { docNo:'', effectiveDate:'', recipient:'', via:'', title:'', body:'', subItems:'', contact:'', ...item };
 }
@@ -2226,7 +2253,7 @@ function fixInstructorItem(item){
 function fixReceiptItem(item){
   return {
     instructorId:'', name:'', rrn:'', address:'', affiliation:'', position:'', contact:'', bankInfo:'', hasSeal:false,
-    subject:'', days:'', amount:'', issueDate:'', level:'', receiptNo:'', receiptType:'session', ...item
+    subject:'', days:'', hours:'', amount:'', issueDate:'', level:'', receiptNo:'', receiptType:'session', ...item
   };
 }
 function fixSalaryReceiptItem(item){
@@ -2262,7 +2289,7 @@ function fixEmployeeItem(item){
 }
 
 function migrateData(d){
-  if(!d) return { contract:[], docs:[], cert:[], employ:[], employees:[], official:[], buildings:[], lease:[], renewal:[], tenants:[], subdelegation:[], movein:[], instructors:[], receipts:[], empReceipts:[], salaryReceipts:[], career:[] };
+  if(!d) return { contract:[], docs:[], cert:[], employ:[], employees:[], official:[], buildings:[], lease:[], renewal:[], tenants:[], subdelegation:[], movein:[], instructors:[], receipts:[], empReceipts:[], salaryReceipts:[], career:[], rules:[] };
   d.contract = (d.contract||[]).map(fixContractItem);
   d.docs = (d.docs || d.education || []).map(fixDocItem);
   delete d.education;
@@ -2281,10 +2308,11 @@ function migrateData(d){
   d.empReceipts = (d.empReceipts||[]).map(fixEmpReceiptItem);
   d.salaryReceipts = (d.salaryReceipts||[]).map(fixSalaryReceiptItem);
   d.career = (d.career||[]).map(fixCareerItem);
+  d.rules = (d.rules||[]).map(fixRuleItem);
   if(!d.settings || typeof d.settings !== 'object'){
-    d.settings = { viewerMode:false, allowedTabs:['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career'], company:{ name:'', ceo:'', address:'', bizNumber:'', issuerName:'', issuerPosition:'', hasSeal:false, hasLogo:false, hasLogo2:false } };
+    d.settings = { viewerMode:false, allowedTabs:['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career','rules'], company:{ name:'', ceo:'', address:'', bizNumber:'', issuerName:'', issuerPosition:'', hasSeal:false, hasLogo:false, hasLogo2:false } };
   }
-  if(!Array.isArray(d.settings.allowedTabs)) d.settings.allowedTabs = ['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career'];
+  if(!Array.isArray(d.settings.allowedTabs)) d.settings.allowedTabs = ['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career','rules'];
   d.settings.allowedTabs = d.settings.allowedTabs.map(t => t==='education' ? 'docs' : t);
   if(!d.settings.company) d.settings.company = { name:'', ceo:'', address:'', bizNumber:'', issuerName:'', issuerPosition:'', hasSeal:false, hasLogo:false, hasLogo2:false };
   return d;
@@ -2484,6 +2512,12 @@ function openModal(doc){
     document.getElementById('tn_contact').value = doc ? doc.contact : '';
     document.getElementById('tn_purpose').value = doc ? doc.purpose : '';
     document.getElementById('tn_notes').value = doc ? doc.notes : '';
+  } else if(tab==='rules'){
+    document.getElementById('modalTitle-rules').textContent = doc ? '사내 규정 수정' : '사내 규정 추가';
+    document.getElementById('rl_editId').value = doc ? doc.id : '';
+    document.getElementById('rl_title').value = doc ? doc.title : '';
+    document.getElementById('rl_category').value = doc ? doc.category : '';
+    document.getElementById('rl_content').value = doc ? doc.content : '';
   } else if(tab==='instructors'){
     document.getElementById('modalTitle-instructors').textContent = doc ? '강사 수정' : '강사 추가';
     document.getElementById('in_editId').value = doc ? doc.id : '';
@@ -2506,6 +2540,7 @@ function openModal(doc){
     document.getElementById('rc_instructorSelect').value = doc ? (doc.instructorId || '') : '';
     document.getElementById('rc_subject').value = doc ? doc.subject : '';
     document.getElementById('rc_days').value = doc ? doc.days : '';
+    document.getElementById('rc_hours').value = doc ? doc.hours : '';
     document.getElementById('rc_issueDate').value = doc ? doc.issueDate : today;
     document.getElementById('rc_level').value = doc ? doc.level : '';
     document.getElementById('rc_receiptNo').value = doc ? doc.receiptNo : String(data.receipts.length + 1);
@@ -3198,6 +3233,29 @@ async function saveTenant(){
   render();
 }
 
+async function saveRule(){
+  const btn = document.getElementById('rl_saveBtn');
+  const title = document.getElementById('rl_title').value.trim();
+  if(!title){ alert('제목을 입력해주세요.'); return; }
+  btn.disabled = true; btn.textContent = '저장 중...';
+  const id = document.getElementById('rl_editId').value || ('rl-'+Date.now());
+  const rule = {
+    id,
+    title,
+    category: document.getElementById('rl_category').value.trim(),
+    content: document.getElementById('rl_content').value.trim(),
+    updated: Date.now()
+  };
+  const idx = data.rules.findIndex(d=>d.id===id);
+  if(idx>=0) data.rules[idx]=rule; else data.rules.push(rule);
+  cacheLocal('rules');
+  const ok = await saveItemToFirestore('rules', rule);
+  btn.disabled = false; btn.textContent = '저장';
+  if(!ok) return;
+  closeModal('rules');
+  render();
+}
+
 async function saveInstructor(){
   const btn = document.getElementById('in_saveBtn');
   const name = document.getElementById('in_name').value.trim();
@@ -3271,18 +3329,23 @@ function applyReceiptInstructor(){
 }
 
 const RECEIPT_DAILY_RATE = 200000;
+const RECEIPT_HOURLY_RATE = 40000;
 
 function updateReceiptPreview(){
   const days = parseFloat(document.getElementById('rc_days').value) || 0;
-  const amount = Math.round(days * RECEIPT_DAILY_RATE);
+  const hours = parseFloat(document.getElementById('rc_hours').value) || 0;
+  const amount = Math.round(days * RECEIPT_DAILY_RATE + hours * RECEIPT_HOURLY_RATE);
   const amountBox = document.getElementById('rc_amountDisplay');
   const box = document.getElementById('rc_previewBox');
   if(!amount){
     amountBox.innerHTML = '';
-    box.innerHTML = '일수를 입력하면 금액과 세금 계산 미리보기가 여기 나와요.';
+    box.innerHTML = '일수 또는 시간을 입력하면 금액과 세금 계산 미리보기가 여기 나와요.';
     return;
   }
-  amountBox.innerHTML = `금액 : <b>${amount.toLocaleString('ko-KR')}원</b> (${days}일 × 200,000원)`;
+  const parts = [];
+  if(days) parts.push(`${days}일 × 200,000원`);
+  if(hours) parts.push(`${hours}시간 × 40,000원`);
+  amountBox.innerHTML = `금액 : <b>${amount.toLocaleString('ko-KR')}원</b> (${parts.join(' + ')})`;
   const { incomeTax, localTax, totalWithholding, netAmount } = calcReceiptTax(amount);
   box.innerHTML = `
     사업소득세(3%) : ${incomeTax.toLocaleString('ko-KR')}원<br>
@@ -3298,8 +3361,9 @@ async function saveReceipt(shouldPrint){
   const instructorId = document.getElementById('rc_instructorSelect').value;
   if(!instructorId){ alert('선생님을 선택해주세요.'); return; }
   const days = parseFloat(document.getElementById('rc_days').value) || 0;
-  const amount = Math.round(days * RECEIPT_DAILY_RATE);
-  if(!amount){ alert('일수를 입력해주세요.'); return; }
+  const hours = parseFloat(document.getElementById('rc_hours').value) || 0;
+  const amount = Math.round(days * RECEIPT_DAILY_RATE + hours * RECEIPT_HOURLY_RATE);
+  if(!amount){ alert('일수 또는 시간을 입력해주세요.'); return; }
   btn.disabled = true; otherBtn.disabled = true;
   const originalText = btn.textContent;
   btn.textContent = '저장 중...';
@@ -3323,6 +3387,7 @@ async function saveReceipt(shouldPrint){
     hasSeal: ins ? !!ins.hasSeal : false,
     subject: document.getElementById('rc_subject').value.trim(),
     days,
+    hours,
     amount,
     issueDate: document.getElementById('rc_issueDate').value || new Date().toISOString().slice(0,10),
     level: document.getElementById('rc_level').value,
@@ -4775,6 +4840,7 @@ function render(){
     if(currentTab==='employees') hay = [d.name,d.position,d.code,d.team].join(' ');
     if(currentTab==='buildings') hay = [d.name,d.address,d.area,d.notes].join(' ');
     if(currentTab==='tenants') hay = [d.companyName,d.repName,d.address,d.contact].join(' ');
+    if(currentTab==='rules') hay = [d.title,d.category,d.content].join(' ');
     if(currentTab==='instructors') hay = [d.name,d.subject,d.affiliation,d.contact].join(' ');
     if(currentTab==='receipts') hay = [d.name,d.subject,d.receiptNo].join(' ');
     if(currentTab==='salaryReceipts') hay = [d.name,d.receiptNo].join(' ');
@@ -4848,6 +4914,9 @@ function render(){
     }
     if(currentTab==='tenants'){
       if(sort==='name') return (a.companyName||'').localeCompare(b.companyName||'','ko');
+    }
+    if(currentTab==='rules'){
+      if(sort==='name') return (a.title||'').localeCompare(b.title||'','ko');
     }
     if(currentTab==='instructors'){
       if(sort==='name') return (a.name||'').localeCompare(b.name||'','ko');
@@ -5078,6 +5147,17 @@ function render(){
           <button class="icon-btn del" onclick="deleteItem('tenants','${d.id}')">삭제</button>` : ''}
         </div>
       </div>`).join('') + '</div>';
+  } else if(currentTab==='rules'){
+    content.innerHTML = '<div class="grid" style="grid-template-columns:1fr;">' + items.map(d => `
+      <div class="card">
+        ${d.category ? `<div class="meta">${escapeHtml(d.category)}</div>` : ''}
+        <h3>${escapeHtml(d.title)}</h3>
+        <div class="notes" style="white-space:pre-wrap; line-height:1.7;">${escapeHtml(d.content||'')}</div>
+        <div class="card-actions">
+          ${!isRestricted() ? `<button class="icon-btn" onclick='openModal(${JSON.stringify(d).replace(/'/g,"&#39;")})'>수정</button>
+          <button class="icon-btn del" onclick="deleteItem('rules','${d.id}')">삭제</button>` : ''}
+        </div>
+      </div>`).join('') + '</div>';
   } else if(currentTab==='instructors'){
     content.innerHTML = '<div class="grid">' + items.map(d => `
       <div class="card">
@@ -5164,6 +5244,7 @@ function renderSortOptions(){
   if(currentTab==='employees') opts = [['recent','최근수정순'],['name','이름순']];
   if(currentTab==='buildings') opts = [['recent','최근수정순'],['name','이름순']];
   if(currentTab==='tenants') opts = [['recent','최근수정순'],['name','회사명순']];
+  if(currentTab==='rules') opts = [['recent','최근수정순'],['name','제목순']];
   if(currentTab==='instructors') opts = [['recent','최근수정순'],['name','성명순']];
   if(currentTab==='receipts') opts = [['recent','최근수정순'],['month','월별(발행일순)'],['instructor','선생님별']];
   if(currentTab==='salaryReceipts') opts = [['recent','최근수정순'],['month','월별(발행일순)'],['instructor','선생님별']];
