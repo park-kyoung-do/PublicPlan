@@ -10,6 +10,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
 <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 <style>
   :root{
     --ink:#0D0D0D; --paper:#F7F4EC; --paper-2:#EFEAE0;
@@ -224,6 +225,7 @@
     <button class="tab-btn" data-tab="receipts" data-cat="hame_cat" onclick="setTab('receipts')">🧾 강사 영수증(교육청)</button>
     <button class="tab-btn" data-tab="salaryReceipts" data-cat="hame_cat" onclick="setTab('salaryReceipts')">🧾 강사 영수증(월급)</button>
     <button class="tab-btn" data-tab="instructors" data-cat="hame_cat" onclick="setTab('instructors')">👨‍🏫 강사 관리</button>
+    <button class="tab-btn" data-tab="budget" data-cat="hame_cat" onclick="setTab('budget')">💰 예산 정리</button>
     <button class="tab-btn" data-tab="buildings" data-cat="ibagu_cat" onclick="setTab('buildings')">🏢 건물 관리</button>
     <button class="tab-btn" data-tab="tenants" data-cat="ibagu_cat" onclick="setTab('tenants')">🧑 입주자 관리</button>
   </div>
@@ -246,6 +248,11 @@
   <button class="btn" id="addBtn" onclick="handleAddClick()">+ 새 항목 추가</button>
   <button class="btn secondary" id="bulkEmployBtn" onclick="openBulkEmploy()" style="display:none;">📑 일괄 발급</button>
   <button class="btn secondary" id="bulkReceiptBtn" onclick="printBulkReceipts()" style="display:none;">🧾 영수증 일괄 다운로드 (현재 필터 기준)</button>
+  <button class="btn secondary" id="budgetSheetBtn" onclick="handleGoogleSheetImport()" style="display:none;">🔗 구글시트에서 불러오기</button>
+  <button class="btn secondary" id="budgetUpdateBtn" onclick="manualUpdateBudgetFromSheet()" style="display:none;">🔄 구글시트 업데이트</button>
+  <button class="btn secondary" id="budgetExportBtn" onclick="exportBudgetExcel()" style="display:none;">📤 엑셀 내보내기</button>
+  <button class="btn secondary" id="budgetDedupeBtn" onclick="dedupeBudgetItems()" style="display:none;">🧹 중복 정리</button>
+  <button class="btn secondary" id="budgetAllocBtn" onclick="openBudgetAllocationModal()" style="display:none;">🎯 과목별 예산 설정</button>
   <select id="sortSelect" onchange="render()"></select>
   <div class="amount-filter" id="amountFilterBox" style="display:flex;">
     <label>최소금액(백만원)</label>
@@ -273,7 +280,19 @@
     <label>월</label>
     <select id="receiptMonthSelect" onchange="render()"></select>
   </div>
+  <div class="amount-filter" id="budgetFilterBox" style="display:none;">
+    <label>월</label>
+    <select id="budgetMonthSelect" onchange="render()"></select>
+    <label>프로그램</label>
+    <select id="budgetProgramSelect" onchange="render()"></select>
+    <label>과목</label>
+    <select id="budgetCategorySelect" onchange="render()"></select>
+  </div>
 </div>
+<div id="budgetSyncStatusBox" style="display:none; max-width:1200px; margin:0 auto; padding:0 32px;">
+  <div id="budgetSyncStatus" onclick="unlinkBudgetSheet()" style="font-size:12px; color:var(--mist); cursor:pointer; padding:6px 0;"></div>
+</div>
+<div id="budgetSummaryBox" style="display:none; max-width:1200px; margin:0 auto; padding:0 32px;"></div>
 
 <div class="chips" id="filterChips"></div>
 
@@ -531,6 +550,64 @@
     <div class="modal-actions">
       <button class="btn secondary" onclick="closeModal('rules')">취소</button>
       <button class="btn" id="rl_saveBtn" onclick="saveRule()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 예산 정리 항목 추가 모달 ===== -->
+<div class="overlay" id="overlay-budget">
+  <div class="modal">
+    <h2 id="modalTitle-budget">예산 항목 추가</h2>
+    <input type="hidden" id="bg_editId">
+    <div class="field">
+      <label>프로그램</label>
+      <input id="bg_program" list="bg_program_list" placeholder="예: 기초, 초급, 토요 메이커" oninput="updateBudgetCategoryOptions()">
+      <datalist id="bg_program_list"></datalist>
+    </div>
+    <div class="field">
+      <label>과목 (프로그램 선택 시 그 하위 과목만 추천돼요)</label>
+      <input id="bg_category" list="bg_category_list" placeholder="예: 제과제빵, 3D">
+      <datalist id="bg_category_list"></datalist>
+    </div>
+    <div class="field"><label>품명</label><input id="bg_itemName" placeholder="예: 강력분"></div>
+    <div class="field"><label>규격</label><input id="bg_spec" placeholder="예: 2.5kg x 6개"></div>
+    <div class="field"><label>구매일자</label><input type="date" id="bg_purchaseDate" min="1900-01-01" max="2099-12-31"></div>
+    <div class="field"><label>도착일자 (선택)</label><input type="date" id="bg_arrivalDate" min="1900-01-01" max="2099-12-31"></div>
+    <div class="field"><label>단가</label><input id="bg_unitPrice" placeholder="예: 27,000원" oninput="formatAmountInput(this)"></div>
+    <div class="field"><label>수량</label><input type="number" id="bg_qty" placeholder="예: 1" min="0" step="1" oninput="updateBudgetAmountPreview()"></div>
+    <div class="field"><label>배송비 (선택)</label><input id="bg_shipping" placeholder="예: 3,000원" oninput="formatAmountInput(this); updateBudgetAmountPreview();"></div>
+    <div class="field"><label>금액 (비워두면 단가×수량+배송비로 자동계산)</label><input id="bg_amount" placeholder="예: 27,000원" oninput="formatAmountInput(this)"></div>
+    <div class="field" id="bg_amountPreview" style="font-size:12.5px; color:var(--mist);"></div>
+    <div class="field"><label>비고 (선택)</label><input id="bg_note" placeholder="예: 식힘망(적립금 사용)"></div>
+    <div class="field"><label>구매처/링크 (선택)</label><input id="bg_link" placeholder="예: 베이킹맘, 링크-쿠팡"></div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeModal('budget')">취소</button>
+      <button class="btn" id="bg_saveBtn" onclick="saveBudgetItem()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 예산 엑셀 불러오기 확인 모달 ===== -->
+<div class="overlay" id="overlay-budgetImport">
+  <div class="modal">
+    <h2>예산 엑셀 불러오기</h2>
+    <div class="hint" style="margin-bottom:14px;" id="bi_summary"></div>
+    <div class="field"><label>구매일자/도착일자에 연도가 없는 경우 적용할 연도</label><input type="number" id="bi_year" placeholder="예: 2026" min="2000" max="2099" step="1"></div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeModal('budgetImport')">취소</button>
+      <button class="btn" id="bi_confirmBtn" onclick="confirmBudgetImport()">이 내용으로 불러오기</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay-budgetAlloc">
+  <div class="modal">
+    <h2>과목별 예산 설정</h2>
+    <div class="hint" style="margin-bottom:14px;">과목마다 배정된 예산을 적어두면, 아래에서 그 과목만 필터했을 때 남은 금액을 보여드려요. 비워두면 그 과목은 예산 없이 지출 합계만 표시돼요.</div>
+    <div id="budgetAllocList" style="display:flex; flex-direction:column; gap:10px; max-height:400px; overflow-y:auto; margin-bottom:16px;"></div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeModal('budgetAlloc')">취소</button>
+      <button class="btn" id="ba_saveBtn" onclick="saveBudgetAllocations()">저장</button>
     </div>
   </div>
 </div>
@@ -909,6 +986,7 @@
         <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="receipts" style="width:auto;"> 🧾 강사 영수증(교육청)</label>
         <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="salaryReceipts" style="width:auto;"> 🧾 강사 영수증(월급)</label>
         <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="instructors" style="width:auto;"> 👨‍🏫 강사 관리</label>
+        <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="budget" style="width:auto;"> 💰 예산 정리</label>
         <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="leave" style="width:auto;"> 🏖 연차 관리</label>
         <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="comp" style="width:auto;"> 🔄 대체휴무 관리</label>
         <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="workGP" style="width:auto;"> 🗓 빈시간(공공플랜)</label>
@@ -967,8 +1045,8 @@
 </div>
 
 <script>
-const KEYS = { contract:'gongplan_contracts_v1', docs:'gongplan_docs_v1', cert:'gongplan_certs_v1', employ:'gongplan_employ_v1', employees:'gongplan_employees_v1', official:'gongplan_official_v1', buildings:'gongplan_buildings_v1', lease:'gongplan_lease_v1', renewal:'gongplan_renewal_v1', tenants:'gongplan_tenants_v1', subdelegation:'gongplan_subdelegation_v1', movein:'gongplan_movein_v1', instructors:'gongplan_instructors_v1', receipts:'gongplan_receipts_v1', empReceipts:'gongplan_empreceipts_v1', salaryReceipts:'gongplan_salaryreceipts_v1', career:'gongplan_career_v1', rules:'gongplan_rules_v1' };
-let data = { contract:[], docs:[], cert:[], employ:[], employees:[], official:[], buildings:[], lease:[], renewal:[], tenants:[], subdelegation:[], movein:[], instructors:[], receipts:[], empReceipts:[], salaryReceipts:[], career:[], rules:[], settings:{ viewerMode:false, allowedTabs:['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career','rules'], company:{ name:'', ceo:'', address:'', bizNumber:'', issuerName:'', issuerPosition:'', hasSeal:false, hasLogo:false, hasLogo2:false } } };
+const KEYS = { contract:'gongplan_contracts_v1', docs:'gongplan_docs_v1', cert:'gongplan_certs_v1', employ:'gongplan_employ_v1', employees:'gongplan_employees_v1', official:'gongplan_official_v1', buildings:'gongplan_buildings_v1', lease:'gongplan_lease_v1', renewal:'gongplan_renewal_v1', tenants:'gongplan_tenants_v1', subdelegation:'gongplan_subdelegation_v1', movein:'gongplan_movein_v1', instructors:'gongplan_instructors_v1', receipts:'gongplan_receipts_v1', empReceipts:'gongplan_empreceipts_v1', salaryReceipts:'gongplan_salaryreceipts_v1', career:'gongplan_career_v1', rules:'gongplan_rules_v1', budget:'gongplan_budget_v1', budgetAllocations:'gongplan_budgetalloc_v1' };
+let data = { contract:[], docs:[], cert:[], employ:[], employees:[], official:[], buildings:[], lease:[], renewal:[], tenants:[], subdelegation:[], movein:[], instructors:[], receipts:[], empReceipts:[], salaryReceipts:[], career:[], rules:[], budget:[], budgetAllocations:[], settings:{ viewerMode:false, allowedTabs:['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career','rules','budget'], company:{ name:'', ceo:'', address:'', bizNumber:'', issuerName:'', issuerPosition:'', hasSeal:false, hasLogo:false, hasLogo2:false } } };
 let currentTab = 'contract';
 let currentCategory = 'docs_cat';
 const TAB_CATEGORY_MAP = {
@@ -976,7 +1054,7 @@ const TAB_CATEGORY_MAP = {
   employ:'issue_cat', official:'issue_cat', career:'issue_cat',
   leave:'hr_cat', comp:'hr_cat', workGP:'hr_cat', workHM:'hr_cat', employees:'hr_cat', rules:'hr_cat',
   movein:'ibagu_cat', lease:'ibagu_cat', renewal:'ibagu_cat', buildings:'ibagu_cat', tenants:'ibagu_cat', subdelegation:'ibagu_cat',
-  receipts:'hame_cat', salaryReceipts:'hame_cat', instructors:'hame_cat'
+  receipts:'hame_cat', salaryReceipts:'hame_cat', instructors:'hame_cat', budget:'hame_cat'
 };
 
 function setCategory(cat){
@@ -1871,7 +1949,7 @@ async function saveSettings(){
 function applyRestrictions(){
   const loggedIn = sessionRole !== null;
   const restricted = isRestricted();
-  const allowed = restricted ? data.settings.allowedTabs : ['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career','rules'];
+  const allowed = restricted ? data.settings.allowedTabs : ['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career','rules','budget'];
 
   // 세부탭: 권한 + 현재 카테고리 둘 다 만족해야 보임
   document.querySelectorAll('#tabsBar .tab-btn').forEach(btn=>{
@@ -1909,6 +1987,11 @@ function applyRestrictions(){
   document.getElementById('quantExportBtn').style.display = loggedIn ? 'inline-block' : 'none';
   document.getElementById('bulkEmployBtn').style.display = (loggedIn && !restricted && currentTab==='employ') ? 'inline-block' : 'none';
   document.getElementById('bulkReceiptBtn').style.display = (loggedIn && !restricted && currentTab==='receipts') ? 'inline-block' : 'none';
+  document.getElementById('budgetSheetBtn').style.display = (loggedIn && !restricted && currentTab==='budget') ? 'inline-block' : 'none';
+  document.getElementById('budgetUpdateBtn').style.display = (loggedIn && !restricted && currentTab==='budget') ? 'inline-block' : 'none';
+  document.getElementById('budgetExportBtn').style.display = (loggedIn && !restricted && currentTab==='budget') ? 'inline-block' : 'none';
+  document.getElementById('budgetDedupeBtn').style.display = (loggedIn && !restricted && currentTab==='budget') ? 'inline-block' : 'none';
+  document.getElementById('budgetAllocBtn').style.display = (loggedIn && !restricted && currentTab==='budget') ? 'inline-block' : 'none';
   document.getElementById('restrictionBadge').textContent = restricted ? '👁 뷰어로 로그인됨 (다운로드만 가능)' : (sessionRole === 'admin' ? '🔓 관리자로 로그인됨' : '');
 }
 
@@ -1937,7 +2020,7 @@ function ensureFirebaseAuth(){
     });
   });
 }
-const COLLECTIONS = { contract:'contracts', docs:'docs', cert:'certs', employ:'employment_certificates', employees:'employees', official:'official_docs', buildings:'buildings', lease:'lease_contracts', renewal:'renewal_requests', tenants:'tenants', subdelegation:'subdelegation_requests', movein:'movein_contracts', instructors:'instructors', receipts:'instructor_receipts', empReceipts:'employee_receipts', salaryReceipts:'instructor_salary_receipts', career:'career_certificates', rules:'company_rules' };
+const COLLECTIONS = { contract:'contracts', docs:'docs', cert:'certs', employ:'employment_certificates', employees:'employees', official:'official_docs', buildings:'buildings', lease:'lease_contracts', renewal:'renewal_requests', tenants:'tenants', subdelegation:'subdelegation_requests', movein:'movein_contracts', instructors:'instructors', receipts:'instructor_receipts', empReceipts:'employee_receipts', salaryReceipts:'instructor_salary_receipts', career:'career_certificates', rules:'company_rules', budget:'hamec_budget', budgetAllocations:'hamec_budget_allocations' };
 
 function updateSyncStatus(msg){
   document.getElementById('syncStatus').textContent = msg || '';
@@ -2047,6 +2130,18 @@ async function initFirebaseSync(){
     render();
   }, err => { console.error(err); updateSyncStatus('🔴 사내 규정 동기화 실패: ' + err.message); });
 
+  db.collection('hamec_budget').onSnapshot(snap => {
+    data.budget = snap.docs.map(d => fixBudgetItem(d.data()));
+    localStorage.setItem(KEYS.budget, JSON.stringify(data.budget));
+    render();
+  }, err => { console.error(err); updateSyncStatus('🔴 예산 정리 동기화 실패: ' + err.message); });
+
+  db.collection('hamec_budget_allocations').onSnapshot(snap => {
+    data.budgetAllocations = snap.docs.map(d => fixBudgetAllocationItem(d.data()));
+    localStorage.setItem(KEYS.budgetAllocations, JSON.stringify(data.budgetAllocations));
+    render();
+  }, err => { console.error(err); updateSyncStatus('🔴 과목별 예산 동기화 실패: ' + err.message); });
+
   db.collection('employee_receipts').onSnapshot(snap => {
     data.empReceipts = snap.docs.map(d => fixEmpReceiptItem(d.data()));
     localStorage.setItem(KEYS.empReceipts, JSON.stringify(data.empReceipts));
@@ -2073,7 +2168,7 @@ async function initFirebaseSync(){
   db.collection('settings').doc('main').onSnapshot(snap => {
     if(snap.exists){
       data.settings = snap.data();
-      if(!Array.isArray(data.settings.allowedTabs)) data.settings.allowedTabs = ['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career','rules'];
+      if(!Array.isArray(data.settings.allowedTabs)) data.settings.allowedTabs = ['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career','rules','budget'];
       if(!data.settings.company) data.settings.company = { name:'', ceo:'', address:'', bizNumber:'', issuerName:'', issuerPosition:'', hasSeal:false, hasLogo:false, hasLogo2:false };
     }
     applyRestrictions();
@@ -2216,6 +2311,17 @@ function fixCareerItem(item){
 function fixRuleItem(item){
   return { title:'', category:'', content:'', ...item };
 }
+function fixBudgetItem(item){
+  return {
+    sourceKey:null,
+    program:'', category:'', itemName:'', spec:'',
+    purchaseDate:'', arrivalDate:'', unitPrice:'', qty:'', shipping:'', amount:'',
+    note:'', link:'', ...item
+  };
+}
+function fixBudgetAllocationItem(item){
+  return { program:'', category:'', amount:0, ...item };
+}
 function fixOfficialItem(item){
   return { docNo:'', effectiveDate:'', recipient:'', via:'', title:'', body:'', subItems:'', contact:'', ...item };
 }
@@ -2289,7 +2395,7 @@ function fixEmployeeItem(item){
 }
 
 function migrateData(d){
-  if(!d) return { contract:[], docs:[], cert:[], employ:[], employees:[], official:[], buildings:[], lease:[], renewal:[], tenants:[], subdelegation:[], movein:[], instructors:[], receipts:[], empReceipts:[], salaryReceipts:[], career:[], rules:[] };
+  if(!d) return { contract:[], docs:[], cert:[], employ:[], employees:[], official:[], buildings:[], lease:[], renewal:[], tenants:[], subdelegation:[], movein:[], instructors:[], receipts:[], empReceipts:[], salaryReceipts:[], career:[], rules:[], budget:[], budgetAllocations:[] };
   d.contract = (d.contract||[]).map(fixContractItem);
   d.docs = (d.docs || d.education || []).map(fixDocItem);
   delete d.education;
@@ -2309,10 +2415,12 @@ function migrateData(d){
   d.salaryReceipts = (d.salaryReceipts||[]).map(fixSalaryReceiptItem);
   d.career = (d.career||[]).map(fixCareerItem);
   d.rules = (d.rules||[]).map(fixRuleItem);
+  d.budget = (d.budget||[]).map(fixBudgetItem);
+  d.budgetAllocations = (d.budgetAllocations||[]).map(fixBudgetAllocationItem);
   if(!d.settings || typeof d.settings !== 'object'){
-    d.settings = { viewerMode:false, allowedTabs:['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career','rules'], company:{ name:'', ceo:'', address:'', bizNumber:'', issuerName:'', issuerPosition:'', hasSeal:false, hasLogo:false, hasLogo2:false } };
+    d.settings = { viewerMode:false, allowedTabs:['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career','rules','budget'], company:{ name:'', ceo:'', address:'', bizNumber:'', issuerName:'', issuerPosition:'', hasSeal:false, hasLogo:false, hasLogo2:false } };
   }
-  if(!Array.isArray(d.settings.allowedTabs)) d.settings.allowedTabs = ['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career','rules'];
+  if(!Array.isArray(d.settings.allowedTabs)) d.settings.allowedTabs = ['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career','rules','budget'];
   d.settings.allowedTabs = d.settings.allowedTabs.map(t => t==='education' ? 'docs' : t);
   if(!d.settings.company) d.settings.company = { name:'', ceo:'', address:'', bizNumber:'', issuerName:'', issuerPosition:'', hasSeal:false, hasLogo:false, hasLogo2:false };
   return d;
@@ -2371,6 +2479,15 @@ function setTab(tab){
   if(tab==='receipts') populateReceiptMonthSelect();
   document.getElementById('bulkEmployBtn').style.display = (tab==='employ') ? 'inline-block' : 'none';
   document.getElementById('bulkReceiptBtn').style.display = (tab==='receipts') ? 'inline-block' : 'none';
+  document.getElementById('budgetSheetBtn').style.display = (tab==='budget') ? 'inline-block' : 'none';
+  document.getElementById('budgetUpdateBtn').style.display = (tab==='budget') ? 'inline-block' : 'none';
+  document.getElementById('budgetExportBtn').style.display = (tab==='budget') ? 'inline-block' : 'none';
+  document.getElementById('budgetDedupeBtn').style.display = (tab==='budget') ? 'inline-block' : 'none';
+  document.getElementById('budgetAllocBtn').style.display = (tab==='budget') ? 'inline-block' : 'none';
+  document.getElementById('budgetFilterBox').style.display = (tab==='budget') ? 'flex' : 'none';
+  document.getElementById('budgetSummaryBox').style.display = (tab==='budget') ? 'block' : 'none';
+  document.getElementById('budgetSyncStatusBox').style.display = (tab==='budget') ? 'block' : 'none';
+  if(tab==='budget'){ populateBudgetFilters(); autoSyncBudgetIfLinked(); }
   document.getElementById('addBtn').textContent = isEmployeesTab ? '+ 새 직원 추가' : ((isRestricted() && tab==='employ') ? '🪪 재직증명서 발급' : (tab==='salaryReceipts' ? '💰 강사료 일괄 발급' : '+ 새 항목 추가'));
 
   document.getElementById('searchInput').style.display = isSpecialTab ? 'none' : 'block';
@@ -2518,6 +2635,24 @@ function openModal(doc){
     document.getElementById('rl_title').value = doc ? doc.title : '';
     document.getElementById('rl_category').value = doc ? doc.category : '';
     document.getElementById('rl_content').value = doc ? doc.content : '';
+  } else if(tab==='budget'){
+    document.getElementById('modalTitle-budget').textContent = doc ? '예산 항목 수정' : '예산 항목 추가';
+    document.getElementById('bg_editId').value = doc ? doc.id : '';
+    populateBudgetProgramDatalist();
+    document.getElementById('bg_program').value = doc ? doc.program : '';
+    updateBudgetCategoryOptions();
+    document.getElementById('bg_category').value = doc ? doc.category : '';
+    document.getElementById('bg_itemName').value = doc ? doc.itemName : '';
+    document.getElementById('bg_spec').value = doc ? doc.spec : '';
+    document.getElementById('bg_purchaseDate').value = doc ? doc.purchaseDate : '';
+    document.getElementById('bg_arrivalDate').value = doc ? doc.arrivalDate : '';
+    document.getElementById('bg_unitPrice').value = doc ? doc.unitPrice : '';
+    document.getElementById('bg_qty').value = doc ? doc.qty : '';
+    document.getElementById('bg_shipping').value = doc ? doc.shipping : '';
+    document.getElementById('bg_amount').value = doc ? doc.amount : '';
+    document.getElementById('bg_note').value = doc ? doc.note : '';
+    document.getElementById('bg_link').value = doc ? doc.link : '';
+    updateBudgetAmountPreview();
   } else if(tab==='instructors'){
     document.getElementById('modalTitle-instructors').textContent = doc ? '강사 수정' : '강사 추가';
     document.getElementById('in_editId').value = doc ? doc.id : '';
@@ -3254,6 +3389,619 @@ async function saveRule(){
   if(!ok) return;
   closeModal('rules');
   render();
+}
+
+function parseBudgetNumber(val){
+  if(val === undefined || val === null || val === '') return 0;
+  if(typeof val === 'number') return val;
+  const digits = String(val).replace(/[^0-9.-]/g,'');
+  return digits ? parseFloat(digits) : 0;
+}
+
+function parseBudgetDate(val, defaultYear){
+  if(!val) return '';
+  if(val instanceof Date){
+    return `${val.getFullYear()}-${String(val.getMonth()+1).padStart(2,'0')}-${String(val.getDate()).padStart(2,'0')}`;
+  }
+  const str = String(val).trim();
+  if(!str) return '';
+  // 구글시트 gviz가 날짜로 인식된 셀을 "Date(2026,6,3)" 형식(월은 0부터 시작)으로 내려줌
+  const gviz = str.match(/^Date\((\d+),\s*(\d+),\s*(\d+)\)$/);
+  if(gviz){
+    const y = parseInt(gviz[1],10);
+    const m = parseInt(gviz[2],10) + 1;
+    const d = parseInt(gviz[3],10);
+    return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+  }
+  const md = str.match(/^(\d{1,2})\/(\d{1,2})$/);
+  if(md){
+    return `${defaultYear}-${md[1].padStart(2,'0')}-${md[2].padStart(2,'0')}`;
+  }
+  const full = str.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})$/);
+  if(full){
+    return `${full[1]}-${full[2].padStart(2,'0')}-${full[3].padStart(2,'0')}`;
+  }
+  return '';
+}
+
+function updateBudgetAmountPreview(){
+  const unitPrice = parseAmount(document.getElementById('bg_unitPrice').value);
+  const qty = parseFloat(document.getElementById('bg_qty').value) || 0;
+  const shipping = parseAmount(document.getElementById('bg_shipping').value);
+  const preview = document.getElementById('bg_amountPreview');
+  if(!unitPrice && !qty && !shipping){ preview.textContent = ''; return; }
+  const calc = Math.round(unitPrice*qty + shipping);
+  preview.textContent = `자동계산: ${calc.toLocaleString('ko-KR')}원 (금액 칸을 비워두면 이 값이 저장돼요)`;
+}
+
+async function saveBudgetItem(){
+  const btn = document.getElementById('bg_saveBtn');
+  const itemName = document.getElementById('bg_itemName').value.trim();
+  if(!itemName){ alert('품명을 입력해주세요.'); return; }
+  btn.disabled = true; btn.textContent = '저장 중...';
+  const id = document.getElementById('bg_editId').value || ('bg-'+Date.now());
+  const unitPrice = parseAmount(document.getElementById('bg_unitPrice').value);
+  const qty = parseFloat(document.getElementById('bg_qty').value) || 0;
+  const shipping = parseAmount(document.getElementById('bg_shipping').value);
+  let amount = parseAmount(document.getElementById('bg_amount').value);
+  if(!amount) amount = Math.round(unitPrice*qty + shipping);
+  const item = {
+    id,
+    program: document.getElementById('bg_program').value.trim(),
+    category: document.getElementById('bg_category').value.trim(),
+    itemName,
+    spec: document.getElementById('bg_spec').value.trim(),
+    purchaseDate: document.getElementById('bg_purchaseDate').value,
+    arrivalDate: document.getElementById('bg_arrivalDate').value,
+    unitPrice, qty, shipping, amount,
+    note: document.getElementById('bg_note').value.trim(),
+    link: document.getElementById('bg_link').value.trim(),
+    updated: Date.now()
+  };
+  const idx = data.budget.findIndex(d=>d.id===id);
+  if(idx>=0) data.budget[idx]=item; else data.budget.push(item);
+  cacheLocal('budget');
+  const ok = await saveItemToFirestore('budget', item);
+  btn.disabled = false; btn.textContent = '저장';
+  if(!ok) return;
+  closeModal('budget');
+  render();
+}
+
+let pendingBudgetRows = [];
+
+function parseBudgetRowsArray(rows){
+  if(!rows || rows.length < 2) return { error: '데이터가 없어요.' };
+  const headers = rows[0].map(h => String(h||'').trim());
+  const idx = {
+    seq: headers.indexOf('순번'),
+    program: headers.indexOf('프로그램'),
+    category: headers.indexOf('과목'),
+    itemName: headers.indexOf('품명'),
+    spec: headers.indexOf('규격'),
+    purchaseDate: headers.indexOf('구매일자'),
+    arrivalDate: headers.indexOf('도착일자'),
+    unitPrice: headers.indexOf('단가'),
+    qty: headers.indexOf('수량'),
+    shipping: headers.indexOf('배송비'),
+    amount: headers.indexOf('금액'),
+    note: headers.indexOf('비고'),
+    link: headers.indexOf('구매링크')
+  };
+  if(idx.itemName === -1 || idx.amount === -1){
+    return { error: '필수 열(품명, 금액)을 찾을 수 없어요. 첫 행이 헤더인지, 이름이 정확한지 확인해주세요.' };
+  }
+  const parsed = [];
+  for(let i=1; i<rows.length; i++){
+    const row = rows[i];
+    if(!row || row.every(c => c==='' || c==null)) continue;
+    const itemName = idx.itemName>=0 ? String(row[idx.itemName]||'').trim() : '';
+    if(!itemName) continue;
+    parsed.push({
+      _origRowIdx: i,
+      seq: idx.seq>=0 ? String(row[idx.seq]||'').trim() : String(i),
+      program: idx.program>=0 ? String(row[idx.program]||'').trim() : '',
+      category: idx.category>=0 ? String(row[idx.category]||'').trim() : '',
+      itemName,
+      spec: idx.spec>=0 ? String(row[idx.spec]||'').trim() : '',
+      purchaseDateRaw: idx.purchaseDate>=0 ? row[idx.purchaseDate] : '',
+      arrivalDateRaw: idx.arrivalDate>=0 ? row[idx.arrivalDate] : '',
+      unitPrice: idx.unitPrice>=0 ? parseBudgetNumber(row[idx.unitPrice]) : 0,
+      qty: idx.qty>=0 ? parseBudgetNumber(row[idx.qty]) : 0,
+      shipping: idx.shipping>=0 ? parseBudgetNumber(row[idx.shipping]) : 0,
+      amount: idx.amount>=0 ? parseBudgetNumber(row[idx.amount]) : 0,
+      note: idx.note>=0 ? String(row[idx.note]||'').trim() : '',
+      link: idx.link>=0 ? String(row[idx.link]||'').trim() : ''
+    });
+  }
+  if(parsed.length === 0) return { error: '불러올 항목이 없어요.' };
+  return { rows: parsed };
+}
+
+let pendingBudgetSheetId = null;
+
+function openBudgetImportConfirm(parsed, sourceLabel, sheetId){
+  pendingBudgetRows = parsed;
+  pendingBudgetSheetId = sheetId || null;
+  document.getElementById('bi_summary').textContent = `(${sourceLabel}) ${parsed.length}개 항목을 찾았어요. 구매일자/도착일자가 "4/4" 같은 월/일만 있는 경우 아래 연도를 적용해요.`;
+  document.getElementById('bi_year').value = localStorage.getItem(BUDGET_SHEET_YEAR_KEY) || new Date().getFullYear();
+  document.getElementById('overlay-budgetImport').classList.add('open');
+}
+
+const BUDGET_SHEET_URL_KEY = 'gongplan_budget_sheet_url';
+const BUDGET_SHEET_YEAR_KEY = 'gongplan_budget_sheet_year';
+
+function extractGoogleSheetId(url){
+  const m = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
+  return m ? m[1] : null;
+}
+
+// fetch()는 구글이 CORS를 막아서 브라우저에서 직접 못 씀. JSONP(<script> 태그)로 우회.
+function loadGoogleSheetJSONP(sheetId){
+  return new Promise((resolve, reject) => {
+    const callbackName = 'gsheetJsonpCb_' + Date.now();
+    const timeout = setTimeout(() => {
+      cleanup();
+      reject(new Error('응답이 없어요. 시트가 비공개이거나 링크가 잘못됐을 수 있어요.'));
+    }, 12000);
+    function cleanup(){
+      clearTimeout(timeout);
+      delete window[callbackName];
+      const s = document.getElementById(callbackName);
+      if(s) s.remove();
+    }
+    window[callbackName] = (response) => {
+      cleanup();
+      resolve(response);
+    };
+    const script = document.createElement('script');
+    script.id = callbackName;
+    script.src = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json;responseHandler:${callbackName}`;
+    script.onerror = () => { cleanup(); reject(new Error('시트를 불러오지 못했어요. 링크와 공유 설정을 확인해주세요.')); };
+    document.body.appendChild(script);
+  });
+}
+
+function parseGvizTableToRows(gvizResponse){
+  const table = gvizResponse.table;
+  const headers = (table.cols||[]).map(c => (c.label || '').trim());
+  const rows = (table.rows||[]).map(r => (r.c||[]).map(cell => cell ? (cell.v !== undefined && cell.v !== null ? cell.v : '') : ''));
+  return [headers, ...rows];
+}
+
+async function autoSyncBudgetIfLinked(){
+  const sheetId = localStorage.getItem('gongplan_budget_sheet_id');
+  if(!sheetId) return;
+  const year = parseInt(localStorage.getItem(BUDGET_SHEET_YEAR_KEY), 10) || new Date().getFullYear();
+  const statusEl = document.getElementById('budgetSyncStatus');
+  if(statusEl) statusEl.textContent = '🔄 구글시트와 동기화 중...';
+  try{
+    const gvizResponse = await loadGoogleSheetJSONP(sheetId);
+    if(gvizResponse.status === 'error') throw new Error('시트를 읽을 수 없어요.');
+    const rowsArray = parseGvizTableToRows(gvizResponse);
+    const result = parseBudgetRowsArray(rowsArray);
+    if(result.error) throw new Error(result.error);
+    const { addedCount, updatedCount } = await upsertBudgetRows(result.rows, sheetId, year);
+    render();
+    if(statusEl) statusEl.textContent = `✅ 방금 자동 동기화됨 (신규 ${addedCount}건, 갱신 ${updatedCount}건) · 🔌 연동 끄려면 클릭`;
+  }catch(err){
+    console.error('예산 자동 동기화 실패', err);
+    if(statusEl) statusEl.textContent = '⚠️ 자동 동기화 실패 (콘솔 확인) · 🔌 연동 끄려면 클릭';
+  }
+}
+
+async function manualUpdateBudgetFromSheet(){
+  const sheetId = localStorage.getItem('gongplan_budget_sheet_id');
+  if(!sheetId){
+    alert('아직 연동된 구글시트가 없어요. "🔗 구글시트에서 불러오기"로 먼저 연결해주세요.');
+    return;
+  }
+  const btn = document.getElementById('budgetUpdateBtn');
+  btn.disabled = true; const originalText = btn.textContent; btn.textContent = '업데이트 중...';
+  await autoSyncBudgetIfLinked();
+  btn.disabled = false; btn.textContent = originalText;
+}
+
+function budgetLinkLabel(url){
+  if(!url) return '';
+  if(/coupang\.com/i.test(url)) return '링크-쿠팡';
+  if(/naver\.com|smartstore/i.test(url)) return '링크-네이버';
+  if(/daiso/i.test(url)) return '링크-다이소';
+  if(/^https?:\/\//i.test(url)) return '링크';
+  return url;
+}
+
+function getFilteredBudgetItems(){
+  const search = (document.getElementById('searchInput').value||'').toLowerCase();
+  const monthSel = document.getElementById('budgetMonthSelect').value;
+  const progSel = document.getElementById('budgetProgramSelect').value;
+  const catSel = document.getElementById('budgetCategorySelect').value;
+  return data.budget.filter(d => {
+    const hay = [d.itemName,d.spec,d.program,d.category,d.note,d.link].join(' ').toLowerCase();
+    if(search && !hay.includes(search)) return false;
+    if(monthSel && (d.purchaseDate||'').slice(0,7) !== monthSel) return false;
+    if(progSel && d.program !== progSel) return false;
+    if(catSel && d.category !== catSel) return false;
+    return true;
+  }).sort((a,b) => (a.purchaseDate||'').localeCompare(b.purchaseDate||''));
+}
+
+function shortMD(dateStr){
+  if(!dateStr) return '';
+  const parts = dateStr.split('-');
+  if(parts.length !== 3) return dateStr;
+  return `${parseInt(parts[1],10)}/${parseInt(parts[2],10)}`;
+}
+
+function sanitizeSheetName(name){
+  const cleaned = (name || '시트').replace(/[:\\\/?*\[\]]/g, ' ').trim();
+  return cleaned.slice(0, 31) || '시트';
+}
+
+function buildBudgetSheet(wb, sheetName, items, title, alloc){
+  const ws = wb.addWorksheet(sanitizeSheetName(sheetName));
+
+  // 실측 결과 기준: 이 엑셀 뷰어에서 width 1단위 = 약 14px로 렌더링됨
+  const pxToChar = (px) => Math.round((px / 14) * 100) / 100;
+  // 행 높이도 마찬가지로 렌더링 배율이 있음 (실측 배율 약 7/3)
+  const pxToPt = (px) => Math.round((px * 3/7) * 100) / 100;
+  ws.columns = [30,107,397,397,126,126,208,126,163,215,364,256].map(px => ({ width: pxToChar(px) }));
+
+  const FONT_NAME = '맑은 고딕';
+  const thinBorder = { style:'thin', color:{argb:'FF999999'} };
+  const allBorders = { top:thinBorder, bottom:thinBorder, left:thinBorder, right:thinBorder };
+  const BLUE60 = 'FFBDD7EE';
+  const BLUE80 = 'FFDDEBF7';
+  const YELLOW = 'FFFFFF00';
+  const acctFmt = '_-* #,##0_-;-* #,##0_-;_-* "-"_-;_-@_-';
+  const COLS = ['B','C','D','E','F','G','H','I','J','K','L'];
+  const total = items.reduce((s,d)=>s+(d.amount||0),0);
+
+  // 1~2행: 제목 (B1:K2 병합)
+  ws.mergeCells('B1:K2');
+  const titleCell = ws.getCell('B1');
+  titleCell.value = title;
+  titleCell.font = { name:FONT_NAME, size:14, bold:true };
+  titleCell.alignment = { horizontal:'center', vertical:'middle' };
+  ws.getRow(1).height = pxToPt(47);
+  ws.getRow(2).height = pxToPt(47);
+
+  // 3행: 부제 (B3:K3 병합)
+  ws.mergeCells('B3:K3');
+  const subCell = ws.getCell('B3');
+  subCell.value = '해운대메이커교육체험센터';
+  subCell.font = { name:FONT_NAME, size:11 };
+  subCell.alignment = { horizontal:'right', vertical:'middle' };
+  ws.getRow(3).height = pxToPt(42);
+
+  // 4행: 헤더 (B4:L4)
+  const headers = ['순번','품명','규격','구매일자','도착일자','단가','수량','배송비','금액','비고','구매링크'];
+  headers.forEach((h, i) => {
+    const cell = ws.getCell(COLS[i] + '4');
+    cell.value = h;
+    cell.font = { name:FONT_NAME, size:11, bold:true };
+    cell.alignment = { horizontal:'center', vertical:'middle' };
+    cell.fill = { type:'pattern', pattern:'solid', fgColor:{argb:BLUE60} };
+    cell.border = allBorders;
+  });
+  ws.getRow(4).height = pxToPt(42);
+
+  // 4행 기준 틀 고정
+  ws.views = [{ state:'frozen', ySplit:4 }];
+
+  // 5행부터: 내용
+  items.forEach((d, i) => {
+    const r = 5 + i;
+    ws.getRow(r).height = pxToPt(65);
+    const rowVals = {
+      B: i+1, C: d.itemName||'', D: d.spec||'', E: shortMD(d.purchaseDate), F: shortMD(d.arrivalDate),
+      G: d.unitPrice||0, H: d.qty||0, I: d.shipping||0, J: d.amount||0, K: d.note||'', L: budgetLinkLabel(d.link)
+    };
+    COLS.forEach(col => {
+      const cell = ws.getCell(col + r);
+      cell.value = rowVals[col];
+      cell.font = { name:FONT_NAME, size:11 };
+      cell.alignment = { horizontal: ['G','H','I','J'].includes(col) ? 'right' : 'center', vertical:'middle', wrapText:true };
+      cell.border = allBorders;
+      if(['G','H','I','J'].includes(col)) cell.numFmt = acctFmt;
+    });
+    const isUrl = /^https?:\/\//i.test(d.link||'');
+    if(isUrl){
+      const linkCell = ws.getCell('L' + r);
+      linkCell.value = { text: budgetLinkLabel(d.link), hyperlink: d.link };
+      linkCell.font = { name:FONT_NAME, size:11, color:{argb:'FF0563C1'}, underline:true };
+    }
+  });
+
+  // 합계 / 예산 / 잔액
+  let r = 5 + items.length;
+  const addSummaryRow = (label, value, bg) => {
+    ws.mergeCells(`B${r}:I${r}`);
+    ['B','C','D','E','F','G','H','I'].forEach(col => {
+      const c = ws.getCell(col + r);
+      c.border = allBorders;
+      c.fill = { type:'pattern', pattern:'solid', fgColor:{argb:bg} };
+    });
+    const labelCell = ws.getCell('B' + r);
+    labelCell.value = label;
+    labelCell.font = { name:FONT_NAME, size:11, bold:true };
+    labelCell.alignment = { horizontal:'center', vertical:'middle' };
+    const valueCell = ws.getCell('J' + r);
+    valueCell.value = value;
+    valueCell.font = { name:FONT_NAME, size:11, bold:true };
+    valueCell.alignment = { horizontal:'right', vertical:'middle' };
+    valueCell.numFmt = acctFmt;
+    valueCell.border = allBorders;
+    valueCell.fill = { type:'pattern', pattern:'solid', fgColor:{argb:bg} };
+    ws.getRow(r).height = pxToPt(65);
+    r++;
+  };
+  addSummaryRow('합계', total, BLUE60);
+  if(alloc && alloc.amount){
+    const remaining = alloc.amount - total;
+    addSummaryRow('예산', alloc.amount, YELLOW);
+    addSummaryRow('잔액', remaining, BLUE80);
+  }
+}
+
+async function exportBudgetExcel(){
+  if(typeof ExcelJS === 'undefined'){ alert('엑셀 스타일 라이브러리를 불러오지 못했어요. 인터넷 연결을 확인해주세요.'); return; }
+  const items = getFilteredBudgetItems();
+  if(items.length === 0){ alert('내보낼 항목이 없어요. (현재 필터를 확인해주세요)'); return; }
+
+  const progSel = document.getElementById('budgetProgramSelect').value;
+  const catSel = document.getElementById('budgetCategorySelect').value;
+  const findAlloc = (prog, cat) => data.budgetAllocations.find(a=>a.program===prog && a.category===cat);
+  const buildTitle = (prog, cat) => ['해메체', prog, cat, '구매 리스트'].filter(Boolean).join(' ');
+
+  const btn = document.getElementById('budgetExportBtn');
+  if(btn){ btn.disabled = true; }
+
+  try{
+    const wb = new ExcelJS.Workbook();
+    let downloadName;
+
+    if(catSel){
+      // 과목까지 선택된 경우: 시트 하나
+      const alloc = progSel ? findAlloc(progSel, catSel) : null;
+      const title = buildTitle(progSel, catSel);
+      buildBudgetSheet(wb, '구매리스트', items, title, alloc);
+      downloadName = title;
+    } else {
+      // 과목 미선택: 과목별로 탭을 나눔
+      const groups = new Map(); // "program||category" -> items[]
+      items.forEach(d => {
+        const key = `${d.program||''}||${d.category||'(과목 없음)'}`;
+        if(!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(d);
+      });
+      const keys = [...groups.keys()].sort((a,b)=>a.localeCompare(b,'ko'));
+      keys.forEach(key => {
+        const [prog, cat] = key.split('||');
+        const groupItems = groups.get(key);
+        const alloc = prog && cat ? findAlloc(prog, cat) : null;
+        const title = buildTitle(prog, cat);
+        buildBudgetSheet(wb, cat, groupItems, title, alloc);
+      });
+      downloadName = buildTitle(progSel, '') || '해메체 구매 리스트';
+    }
+
+    const buffer = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type:'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `${downloadName}.xlsx`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }catch(err){
+    console.error(err);
+    alert('엑셀 파일을 만드는 중 오류가 발생했어요: ' + err.message);
+  }
+  if(btn){ btn.disabled = false; }
+}
+
+
+function unlinkBudgetSheet(){
+  if(!confirm('구글시트 자동 동기화를 끌까요? (이미 불러온 데이터는 그대로 남아요)')) return;
+  localStorage.removeItem('gongplan_budget_sheet_id');
+  localStorage.removeItem(BUDGET_SHEET_YEAR_KEY);
+  const statusEl = document.getElementById('budgetSyncStatus');
+  if(statusEl) statusEl.textContent = '';
+}
+
+function budgetContentSignature(d){
+  const norm = (s) => String(s==null?'':s).trim().toLowerCase().replace(/\s+/g,'');
+  return [norm(d.program), norm(d.category), norm(d.itemName), norm(d.spec), norm(d.purchaseDate), norm(d.amount), norm(d.qty)].join('::');
+}
+
+async function dedupeBudgetItems(){
+  const groups = new Map();
+  data.budget.forEach(d => {
+    const sig = budgetContentSignature(d);
+    if(!groups.has(sig)) groups.set(sig, []);
+    groups.get(sig).push(d);
+  });
+  const toDelete = [];
+  const toKeep = [];
+  groups.forEach(list => {
+    if(list.length <= 1){ if(list[0]) toKeep.push(list[0]); return; }
+    list.sort((a,b) => (b.updated||0)-(a.updated||0)); // 최신 것 유지
+    toKeep.push(list[0]);
+    toDelete.push(...list.slice(1));
+  });
+  if(toDelete.length === 0){ alert('중복된 항목이 없어요.'); return; }
+  if(!confirm(`중복 항목 ${toDelete.length}건을 찾았어요. 삭제할까요? (같은 프로그램·과목·품명·규격·구매일자·금액·수량인 항목 기준)`)) return;
+
+  const btn = document.getElementById('budgetDedupeBtn');
+  btn.disabled = true; const originalText = btn.textContent; btn.textContent = '정리 중...';
+
+  const sheetId = localStorage.getItem('gongplan_budget_sheet_id');
+  // 남기는 항목의 sourceKey를 새 방식으로 갱신 (다음 동기화 때 다시 중복되지 않도록)
+  for(const kept of toKeep){
+    if(sheetId){
+      const newKey = buildBudgetSourceKey(sheetId, kept);
+      if(kept.sourceKey !== newKey){
+        kept.sourceKey = newKey;
+        await saveItemToFirestore('budget', kept);
+      }
+    }
+  }
+  for(const item of toDelete){
+    await deleteItemFromFirestore('budget', item.id);
+  }
+  data.budget = toKeep;
+  cacheLocal('budget');
+  btn.disabled = false; btn.textContent = originalText;
+  render();
+  alert(`중복 ${toDelete.length}건을 정리했어요.`);
+}
+
+function openBudgetAllocationModal(){
+  const groupMap = new Map(); // programKey(실제값, 빈문자열 가능) -> Set(category)
+  data.budget.forEach(d => {
+    if(!d.category) return;
+    const programKey = d.program || '';
+    if(!groupMap.has(programKey)) groupMap.set(programKey, new Set());
+    groupMap.get(programKey).add(d.category);
+  });
+  const programKeys = [...groupMap.keys()].sort((a,b)=>a.localeCompare(b,'ko'));
+  const el = document.getElementById('budgetAllocList');
+  if(programKeys.length === 0){
+    el.innerHTML = '<div style="font-size:12.5px; color:var(--mist);">아직 불러온 예산 항목이 없어서 과목이 없어요. 먼저 예산 항목을 불러오거나 추가해주세요.</div>';
+  } else {
+    el.innerHTML = programKeys.map(programKey => {
+      const label = programKey || '(프로그램 없음)';
+      const categories = [...groupMap.get(programKey)].sort((a,b)=>a.localeCompare(b,'ko'));
+      const rows = categories.map(category => {
+        const alloc = data.budgetAllocations.find(a => a.program === programKey && a.category === category);
+        const spent = data.budget.filter(d => (d.program||'') === programKey && d.category === category).reduce((sum,d) => sum + (d.amount||0), 0);
+        return `
+          <div style="display:flex; align-items:center; gap:10px; border:1px solid var(--line); border-radius:4px; padding:9px 12px; margin-left:18px;">
+            <div style="flex:1;">
+              <div style="font-weight:600; font-size:13px;">${escapeHtml(category)}</div>
+              <div style="font-size:11px; color:var(--mist);">현재까지 지출 ${spent.toLocaleString('ko-KR')}원</div>
+            </div>
+            <input type="text" class="ba-input" data-program="${escapeHtml(programKey)}" data-category="${escapeHtml(category)}" value="${alloc && alloc.amount ? Number(alloc.amount).toLocaleString('ko-KR') : ''}" placeholder="예산 없음" oninput="formatAmountInput(this)" style="width:150px;">
+          </div>`;
+      }).join('');
+      return `
+        <div>
+          <div style="font-weight:700; font-size:14px; color:var(--navy); margin:4px 0 8px; padding-bottom:4px; border-bottom:2px solid var(--navy);">${escapeHtml(label)}</div>
+          <div style="display:flex; flex-direction:column; gap:8px;">${rows}</div>
+        </div>`;
+    }).join('<div style="height:6px;"></div>');
+  }
+  document.getElementById('overlay-budgetAlloc').classList.add('open');
+}
+
+async function saveBudgetAllocations(){
+  const btn = document.getElementById('ba_saveBtn');
+  btn.disabled = true; btn.textContent = '저장 중...';
+  const inputs = document.querySelectorAll('.ba-input');
+  for(const input of inputs){
+    const program = input.dataset.program;
+    const category = input.dataset.category;
+    const amount = parseAmount(input.value);
+    const existing = data.budgetAllocations.find(a => a.program === program && a.category === category);
+    const id = existing ? existing.id : 'ba-'+(program+'_'+category).replace(/[^a-zA-Z0-9가-힣]/g,'_');
+    const item = { id, program, category, amount, updated: Date.now() };
+    const idx = data.budgetAllocations.findIndex(a => a.id === id);
+    if(idx>=0) data.budgetAllocations[idx] = item; else data.budgetAllocations.push(item);
+    await saveItemToFirestore('budgetAllocations', item);
+  }
+  cacheLocal('budgetAllocations');
+  btn.disabled = false; btn.textContent = '저장';
+  closeModal('budgetAlloc');
+  render();
+}
+
+async function handleGoogleSheetImport(){
+  let savedUrl = localStorage.getItem(BUDGET_SHEET_URL_KEY) || '';
+  const input = prompt('구글시트 링크를 붙여넣어주세요.\n(시트가 "링크가 있는 모든 사용자 - 뷰어"로 공유되어 있어야 해요)', savedUrl);
+  if(input === null) return; // 취소
+  const url = input.trim();
+  if(!url){ alert('링크를 입력해주세요.'); return; }
+  const sheetId = extractGoogleSheetId(url);
+  if(!sheetId){ alert('구글시트 링크 형식을 확인해주세요.\n(예: https://docs.google.com/spreadsheets/d/시트ID/edit)'); return; }
+  localStorage.setItem(BUDGET_SHEET_URL_KEY, url);
+
+  const btn = document.getElementById('budgetSheetBtn');
+  btn.disabled = true; const originalText = btn.textContent; btn.textContent = '불러오는 중...';
+  try{
+    const gvizResponse = await loadGoogleSheetJSONP(sheetId);
+    if(gvizResponse.status === 'error'){
+      throw new Error('시트를 읽을 수 없어요. "공유" → "링크가 있는 모든 사용자"(뷰어)로 설정되어 있는지 확인해주세요.');
+    }
+    const rowsArray = parseGvizTableToRows(gvizResponse);
+    const result = parseBudgetRowsArray(rowsArray);
+    if(result.error){ alert(result.error); return; }
+    openBudgetImportConfirm(result.rows, '구글시트 연동', sheetId);
+  }catch(err){
+    console.error(err);
+    alert('구글시트를 불러오지 못했어요.\n' + err.message);
+  }
+  btn.disabled = false; btn.textContent = originalText;
+}
+
+function buildBudgetSourceKey(sheetId, row){
+  if(!sheetId) return null;
+  const norm = (s) => String(s==null?'':s).trim().toLowerCase().replace(/\s+/g,'');
+  return [sheetId, norm(row.program), norm(row.category), norm(row.itemName), norm(row.spec), norm(row.purchaseDateRaw), norm(row.amount), norm(row.qty)].join('::');
+}
+
+async function upsertBudgetRows(rows, sheetId, year){
+  let addedCount = 0, updatedCount = 0;
+  for(const row of rows){
+    const sourceKey = buildBudgetSourceKey(sheetId, row);
+    const existing = sourceKey ? data.budget.find(d => d.sourceKey === sourceKey) : null;
+    const id = existing ? existing.id : 'bg-'+Date.now()+'-'+Math.random().toString(36).slice(2,7);
+    const item = {
+      id,
+      sourceKey,
+      program: row.program,
+      category: row.category,
+      itemName: row.itemName,
+      spec: row.spec,
+      purchaseDate: parseBudgetDate(row.purchaseDateRaw, year),
+      arrivalDate: parseBudgetDate(row.arrivalDateRaw, year),
+      unitPrice: row.unitPrice,
+      qty: row.qty,
+      shipping: row.shipping,
+      amount: row.amount,
+      note: row.note,
+      link: row.link,
+      updated: Date.now()
+    };
+    if(existing){
+      const idx = data.budget.findIndex(d => d.id === id);
+      data.budget[idx] = item;
+      updatedCount++;
+    } else {
+      data.budget.push(item);
+      addedCount++;
+    }
+    await saveItemToFirestore('budget', item);
+  }
+  cacheLocal('budget');
+  return { addedCount, updatedCount };
+}
+
+async function confirmBudgetImport(){
+  const year = parseInt(document.getElementById('bi_year').value, 10) || new Date().getFullYear();
+  const btn = document.getElementById('bi_confirmBtn');
+  btn.disabled = true; btn.textContent = '불러오는 중...';
+  const { addedCount, updatedCount } = await upsertBudgetRows(pendingBudgetRows, pendingBudgetSheetId, year);
+  const wasSheetSync = !!pendingBudgetSheetId;
+  if(pendingBudgetSheetId){
+    localStorage.setItem('gongplan_budget_sheet_id', pendingBudgetSheetId);
+    localStorage.setItem(BUDGET_SHEET_YEAR_KEY, String(year));
+  }
+  btn.disabled = false; btn.textContent = '이 내용으로 불러오기';
+  pendingBudgetRows = [];
+  pendingBudgetSheetId = null;
+  closeModal('budgetImport');
+  render();
+  alert(`불러오기 완료! 새로 추가 ${addedCount}건, 갱신 ${updatedCount}건.` + (wasSheetSync ? '\n다음부터는 이 탭을 열 때마다 자동으로 동기화돼요.' : ''));
 }
 
 async function saveInstructor(){
@@ -4786,6 +5534,51 @@ function escapeHtml(str){
   return div.innerHTML;
 }
 
+function populateBudgetFilters(){
+  const monthSel = document.getElementById('budgetMonthSelect');
+  const prevMonth = monthSel.value;
+  const months = [...new Set(data.budget.map(d => d.purchaseDate ? d.purchaseDate.slice(0,7) : '').filter(Boolean))].sort((a,b)=>b.localeCompare(a));
+  monthSel.innerHTML = '<option value="">전체</option>' + months.map(m => `<option value="${m}">${m.replace('-','년 ')}월</option>`).join('');
+  if(months.includes(prevMonth)) monthSel.value = prevMonth;
+
+  const progSel = document.getElementById('budgetProgramSelect');
+  const prevProg = progSel.value;
+  const programs = [...new Set(data.budget.map(d => d.program).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
+  progSel.innerHTML = '<option value="">전체</option>' + programs.map(p => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join('');
+  if(programs.includes(prevProg)) progSel.value = prevProg;
+  if(!progSel.dataset.wired){
+    progSel.addEventListener('change', () => { populateBudgetCategoryFilterOptions(); render(); });
+    progSel.dataset.wired = '1';
+  }
+
+  populateBudgetCategoryFilterOptions();
+}
+
+function populateBudgetCategoryFilterOptions(){
+  const progSel = document.getElementById('budgetProgramSelect');
+  const catSel = document.getElementById('budgetCategorySelect');
+  const prevCat = catSel.value;
+  const selectedProgram = progSel.value;
+  const source = selectedProgram ? data.budget.filter(d => d.program === selectedProgram) : data.budget;
+  const categories = [...new Set(source.map(d => d.category).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
+  catSel.innerHTML = '<option value="">전체</option>' + categories.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+  if(categories.includes(prevCat)) catSel.value = prevCat;
+}
+
+function populateBudgetProgramDatalist(){
+  const dl = document.getElementById('bg_program_list');
+  const programs = [...new Set(data.budget.map(d => d.program).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
+  dl.innerHTML = programs.map(p => `<option value="${escapeHtml(p)}">`).join('');
+}
+
+function updateBudgetCategoryOptions(){
+  const program = document.getElementById('bg_program').value.trim();
+  const dl = document.getElementById('bg_category_list');
+  const source = program ? data.budget.filter(d => d.program === program) : data.budget;
+  const cats = [...new Set(source.map(d => d.category).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
+  dl.innerHTML = cats.map(c => `<option value="${escapeHtml(c)}">`).join('');
+}
+
 function populateReceiptMonthSelect(){
   const sel = document.getElementById('receiptMonthSelect');
   const prev = sel.value;
@@ -4823,6 +5616,7 @@ function render(){
   renderLeaveLedger();
   renderWorkGrid();
   if(currentTab==='receipts' || currentTab==='salaryReceipts') populateReceiptMonthSelect();
+  if(currentTab==='budget') populateBudgetFilters();
   if(currentTab==='leave' || currentTab==='comp' || currentTab==='workGP' || currentTab==='workHM') return;
   const search = document.getElementById('searchInput').value.toLowerCase();
   const sort = document.getElementById('sortSelect').value;
@@ -4841,6 +5635,7 @@ function render(){
     if(currentTab==='buildings') hay = [d.name,d.address,d.area,d.notes].join(' ');
     if(currentTab==='tenants') hay = [d.companyName,d.repName,d.address,d.contact].join(' ');
     if(currentTab==='rules') hay = [d.title,d.category,d.content].join(' ');
+    if(currentTab==='budget') hay = [d.itemName,d.spec,d.program,d.category,d.note,d.link].join(' ');
     if(currentTab==='instructors') hay = [d.name,d.subject,d.affiliation,d.contact].join(' ');
     if(currentTab==='receipts') hay = [d.name,d.subject,d.receiptNo].join(' ');
     if(currentTab==='salaryReceipts') hay = [d.name,d.receiptNo].join(' ');
@@ -4852,9 +5647,18 @@ function render(){
     let amountMatch = true;
     let yearMatch = true;
     let monthMatch = true;
+    let budgetMatch = true;
     if(currentTab==='receipts' || currentTab==='salaryReceipts'){
       const monthSel = document.getElementById('receiptMonthSelect').value;
       if(monthSel) monthMatch = (d.issueDate||'').slice(0,7) === monthSel;
+    }
+    if(currentTab==='budget'){
+      const monthSel = document.getElementById('budgetMonthSelect').value;
+      const progSel = document.getElementById('budgetProgramSelect').value;
+      const catSel = document.getElementById('budgetCategorySelect').value;
+      if(monthSel && (d.purchaseDate||'').slice(0,7) !== monthSel) budgetMatch = false;
+      if(progSel && d.program !== progSel) budgetMatch = false;
+      if(catSel && d.category !== catSel) budgetMatch = false;
     }
     if(currentTab==='contract'){
       const minAmountInput = document.getElementById('minAmountInput').value.trim();
@@ -4869,7 +5673,7 @@ function render(){
         yearMatch = !isNaN(minYear) && !isNaN(itemYear) && itemYear >= minYear;
       }
     }
-    return chipMatch && searchMatch && amountMatch && yearMatch && monthMatch;
+    return chipMatch && searchMatch && amountMatch && yearMatch && monthMatch && budgetMatch;
   });
 
   items.sort((a,b)=>{
@@ -4917,6 +5721,10 @@ function render(){
     }
     if(currentTab==='rules'){
       if(sort==='name') return (a.title||'').localeCompare(b.title||'','ko');
+    }
+    if(currentTab==='budget'){
+      if(sort==='date') return (b.purchaseDate||'').localeCompare(a.purchaseDate||'');
+      if(sort==='amount') return (b.amount||0)-(a.amount||0);
     }
     if(currentTab==='instructors'){
       if(sort==='name') return (a.name||'').localeCompare(b.name||'','ko');
@@ -5158,6 +5966,70 @@ function render(){
           <button class="icon-btn del" onclick="deleteItem('rules','${d.id}')">삭제</button>` : ''}
         </div>
       </div>`).join('') + '</div>';
+  } else if(currentTab==='budget'){
+    const total = items.reduce((sum,d) => sum + (d.amount||0), 0);
+    const selectedProgram = document.getElementById('budgetProgramSelect').value;
+    const selectedCategory = document.getElementById('budgetCategorySelect').value;
+    const alloc = selectedProgram && selectedCategory
+      ? data.budgetAllocations.find(a => a.program === selectedProgram && a.category === selectedCategory)
+      : null;
+    let summaryHtml = `현재 필터 기준 <b>${items.length}건</b> · 지출 합계 <b style="color:var(--navy); font-size:16px;">${total.toLocaleString('ko-KR')}원</b>`;
+    if(alloc && alloc.amount){
+      const remaining = alloc.amount - total;
+      summaryHtml += ` · 예산 <b>${alloc.amount.toLocaleString('ko-KR')}원</b> · 잔여 <b style="color:${remaining<0?'var(--danger)':'var(--green)'};">${remaining.toLocaleString('ko-KR')}원</b>`;
+    } else if(selectedCategory && !selectedProgram){
+      summaryHtml += ` <span style="color:var(--mist); font-size:12px;">(예산/잔여는 프로그램까지 선택해야 나와요)</span>`;
+    }
+    document.getElementById('budgetSummaryBox').innerHTML = `
+      <div style="background:var(--paper-2); border-radius:6px; padding:14px 18px; margin-bottom:16px; font-size:14px;">
+        ${summaryHtml}
+      </div>`;
+    if(items.length === 0){
+      content.innerHTML = '<div class="empty" style="padding:40px 20px; text-align:center; color:var(--mist);">불러온 예산 항목이 없어요. 상단 "📥 엑셀 불러오기" 버튼으로 시작해보세요.</div>';
+    } else {
+      content.innerHTML = `
+        <div style="max-width:1200px; margin:0 auto; padding:0 32px 60px; overflow-x:auto;">
+          <table style="width:100%; border-collapse:collapse; font-size:12.5px; white-space:nowrap;">
+            <thead>
+              <tr style="background:var(--paper-2);">
+                <th style="padding:8px 10px; text-align:left; border-bottom:2px solid var(--line);">구매일자</th>
+                <th style="padding:8px 10px; text-align:left; border-bottom:2px solid var(--line);">프로그램</th>
+                <th style="padding:8px 10px; text-align:left; border-bottom:2px solid var(--line);">과목</th>
+                <th style="padding:8px 10px; text-align:left; border-bottom:2px solid var(--line);">품명</th>
+                <th style="padding:8px 10px; text-align:left; border-bottom:2px solid var(--line);">규격</th>
+                <th style="padding:8px 10px; text-align:right; border-bottom:2px solid var(--line);">단가</th>
+                <th style="padding:8px 10px; text-align:right; border-bottom:2px solid var(--line);">수량</th>
+                <th style="padding:8px 10px; text-align:right; border-bottom:2px solid var(--line);">배송비</th>
+                <th style="padding:8px 10px; text-align:right; border-bottom:2px solid var(--line);">금액</th>
+                <th style="padding:8px 10px; text-align:left; border-bottom:2px solid var(--line);">비고</th>
+                <th style="padding:8px 10px; text-align:left; border-bottom:2px solid var(--line);">구매처</th>
+                ${!isRestricted() ? '<th style="padding:8px 10px; border-bottom:2px solid var(--line);"></th>' : ''}
+              </tr>
+            </thead>
+            <tbody>
+              ${items.map(d => `
+                <tr style="border-bottom:1px solid var(--line);">
+                  <td style="padding:7px 10px;">${escapeHtml(d.purchaseDate||'-')}</td>
+                  <td style="padding:7px 10px;">${escapeHtml(d.program||'-')}</td>
+                  <td style="padding:7px 10px;">${escapeHtml(d.category||'-')}</td>
+                  <td style="padding:7px 10px; white-space:normal; min-width:120px;">${escapeHtml(d.itemName||'-')}</td>
+                  <td style="padding:7px 10px; white-space:normal; min-width:140px; color:var(--mist);">${escapeHtml(d.spec||'-')}</td>
+                  <td style="padding:7px 10px; text-align:right;">${(d.unitPrice||0).toLocaleString('ko-KR')}</td>
+                  <td style="padding:7px 10px; text-align:right;">${d.qty||0}</td>
+                  <td style="padding:7px 10px; text-align:right;">${(d.shipping||0).toLocaleString('ko-KR')}</td>
+                  <td style="padding:7px 10px; text-align:right; font-weight:700;">${(d.amount||0).toLocaleString('ko-KR')}</td>
+                  <td style="padding:7px 10px; white-space:normal; min-width:100px; color:var(--mist);">${escapeHtml(d.note||'-')}</td>
+                  <td style="padding:7px 10px; color:var(--mist);">${/^https?:\/\//.test(d.link||'') ? `<a href="${escapeHtml(d.link)}" target="_blank" rel="noopener">🔗 링크</a>` : escapeHtml(d.link||'-')}</td>
+                  ${!isRestricted() ? `<td style="padding:7px 10px;">
+                    <button class="icon-btn" onclick='openModal(${JSON.stringify(d).replace(/'/g,"&#39;")})'>수정</button>
+                    <button class="icon-btn del" onclick="deleteItem('budget','${d.id}')">삭제</button>
+                  </td>` : ''}
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>`;
+    }
   } else if(currentTab==='instructors'){
     content.innerHTML = '<div class="grid">' + items.map(d => `
       <div class="card">
@@ -5245,6 +6117,7 @@ function renderSortOptions(){
   if(currentTab==='buildings') opts = [['recent','최근수정순'],['name','이름순']];
   if(currentTab==='tenants') opts = [['recent','최근수정순'],['name','회사명순']];
   if(currentTab==='rules') opts = [['recent','최근수정순'],['name','제목순']];
+  if(currentTab==='budget') opts = [['recent','최근수정순'],['date','구매일순'],['amount','금액순']];
   if(currentTab==='instructors') opts = [['recent','최근수정순'],['name','성명순']];
   if(currentTab==='receipts') opts = [['recent','최근수정순'],['month','월별(발행일순)'],['instructor','선생님별']];
   if(currentTab==='salaryReceipts') opts = [['recent','최근수정순'],['month','월별(발행일순)'],['instructor','선생님별']];
