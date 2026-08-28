@@ -5185,13 +5185,14 @@ function renderUcChecklistTable(rows){
 
   function renderCategoryTable(items){
     return `<div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; font-size:12.5px; table-layout:fixed;">
-      <colgroup><col style="width:36px;"><col><col style="width:150px;"><col style="width:90px;"><col style="width:160px;"><col style="width:50px;"></colgroup>
+      <colgroup><col style="width:36px;"><col><col style="width:150px;"><col style="width:90px;"><col style="width:160px;"><col style="width:50px;"><col style="width:50px;"></colgroup>
       <thead><tr style="background:var(--paper-2);">
         <th style="padding:6px 8px;"></th>
         <th style="padding:6px 8px; text-align:left; border-bottom:2px solid var(--line);">내용</th>
         <th style="padding:6px 8px; text-align:left; border-bottom:2px solid var(--line);">담당</th>
         <th style="padding:6px 8px; text-align:left; border-bottom:2px solid var(--line);">데드라인</th>
         <th style="padding:6px 8px; text-align:left; border-bottom:2px solid var(--line);">비고</th>
+        <th style="padding:6px 8px;"></th>
         <th style="padding:6px 8px;"></th>
       </tr></thead><tbody>
       ${items.map(item => `
@@ -5202,6 +5203,7 @@ function renderUcChecklistTable(rows){
           <td style="padding:6px 8px;">${escapeHtml(item.deadline||'-')}</td>
           <td style="padding:6px 8px; white-space:normal; color:var(--mist); font-size:11.5px;">${item.note ? '• '+escapeHtml(item.note) : ''}</td>
           <td style="padding:6px 8px; text-align:center;"><button class="icon-btn" onclick='openChecklistEntryModal(null, ${JSON.stringify(item).replace(/'/g,"&#39;")})'>수정</button></td>
+          <td style="padding:6px 8px; text-align:center;"><button class="icon-btn del" onclick="deleteChecklistItem('${item.id}')">삭제</button></td>
         </tr>
       `).join('')}
       </tbody></table></div>`;
@@ -5226,6 +5228,7 @@ function renderUcChecklistTable(rows){
             <span style="font-weight:400; font-size:12px; color:var(--mist);">(${g.items.filter(i=>i.checked).length}/${g.items.length} 완료)</span>
           </div>
           <button class="icon-btn" onclick="event.stopPropagation(); openChecklistEntryModal('${g.label.replace(/'/g,"\\'")}')">+ 추가</button>
+          ${taskId ? `<button class="icon-btn del" onclick="event.stopPropagation(); deleteTask('${taskId}', '${g.label.replace(/'/g,"\\'")}')">🗑 태스크 삭제</button>` : ''}
         </div>
         ${isOpen ? `<div style="padding:10px 14px;">
           ${taskId ? `<div id="taskContent-${taskId}" style="margin-bottom:8px; font-size:13px; color:var(--mist);">불러오는 중...</div>
@@ -5272,6 +5275,41 @@ async function fillTaskContentInline(taskId, force){
 
 const NOTION_ADD_TASK_CONTENT_URL = 'https://asia-northeast3-publicplan-712ec.cloudfunctions.net/addNotionTaskContent';
 const NOTION_DELETE_BLOCK_URL = 'https://asia-northeast3-publicplan-712ec.cloudfunctions.net/deleteNotionBlock';
+const NOTION_DELETE_PAGE_URL = 'https://asia-northeast3-publicplan-712ec.cloudfunctions.net/deleteNotionBudget'; // 페이지 삭제(보관) 범용 - 이름은 예전 그대로지만 어떤 페이지 ID든 삭제 가능
+
+async function deleteChecklistItem(itemId){
+  if(!confirm('이 체크리스트 항목을 삭제할까요? (노션에서도 지워져요)')) return;
+  try{
+    const resp = await fetch(NOTION_DELETE_PAGE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pageId: itemId })
+    });
+    const result = await resp.json();
+    if(!result.ok) throw new Error(result.error || '알 수 없는 오류');
+    await refreshUcChecklistSection();
+  }catch(err){
+    alert('삭제 실패: ' + err.message);
+  }
+}
+
+async function deleteTask(taskId, taskLabel){
+  if(!confirm(`"${taskLabel}" 태스크 전체를 삭제할까요?\n안에 있는 체크리스트 항목들은 노션에 그대로 남지만, 연결이 끊어져요.`)) return;
+  try{
+    const resp = await fetch(NOTION_DELETE_PAGE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pageId: taskId })
+    });
+    const result = await resp.json();
+    if(!result.ok) throw new Error(result.error || '알 수 없는 오류');
+    expandedChecklistTasks.delete(taskLabel);
+    await refreshUcChecklistSection();
+  }catch(err){
+    alert('삭제 실패: ' + err.message);
+  }
+}
+
 
 function openTaskContentEntryModal(taskId, taskLabel){
   document.getElementById('tce_taskId').value = taskId;
