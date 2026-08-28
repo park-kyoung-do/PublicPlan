@@ -204,6 +204,7 @@
     <button class="tab-btn" data-cat="hr_cat" onclick="setCategory('hr_cat')">👥 인사 관리</button>
     <button class="tab-btn" data-cat="ibagu_cat" onclick="setCategory('ibagu_cat')">🏙 이바구플랫폼</button>
     <button class="tab-btn" data-cat="hame_cat" onclick="setCategory('hame_cat')">🛠 해메체</button>
+    <button class="tab-btn" data-cat="project_cat" onclick="setCategory('project_cat')">📁 프로젝트</button>
   </div>
   <div class="tabs" id="tabsBar" style="border-top:1px solid rgba(247,244,236,0.12);">
     <button class="tab-btn active" data-tab="contract" data-cat="docs_cat" onclick="setTab('contract')">📄 계약서</button>
@@ -226,6 +227,7 @@
     <button class="tab-btn" data-tab="salaryReceipts" data-cat="hame_cat" onclick="setTab('salaryReceipts')">🧾 강사 영수증(월급)</button>
     <button class="tab-btn" data-tab="instructors" data-cat="hame_cat" onclick="setTab('instructors')">👨‍🏫 강사 관리</button>
     <button class="tab-btn" data-tab="budget" data-cat="hame_cat" onclick="setTab('budget')">💰 예산 정리</button>
+    <button class="tab-btn" data-tab="unitcost" data-cat="project_cat" onclick="setTab('unitcost')">🗂 프로젝트 관리</button>
     <button class="tab-btn" data-tab="buildings" data-cat="ibagu_cat" onclick="setTab('buildings')">🏢 건물 관리</button>
     <button class="tab-btn" data-tab="tenants" data-cat="ibagu_cat" onclick="setTab('tenants')">🧑 입주자 관리</button>
   </div>
@@ -246,6 +248,9 @@
 <div class="toolbar">
   <input class="search" id="searchInput" placeholder="검색..." oninput="render()">
   <button class="btn" id="addBtn" onclick="handleAddClick()">+ 새 항목 추가</button>
+  <select id="ucProjectListYearFilter" onchange="onUcProjectListYearFilterChange(this.value)" style="max-width:130px; display:none;">
+    <option value="">전체 연도</option>
+  </select>
   <button class="btn secondary" id="bulkEmployBtn" onclick="openBulkEmploy()" style="display:none;">📑 일괄 발급</button>
   <button class="btn secondary" id="bulkReceiptBtn" onclick="printBulkReceipts()" style="display:none;">🧾 영수증 일괄 다운로드 (현재 필터 기준)</button>
   <button class="btn secondary" id="budgetSheetBtn" onclick="handleGoogleSheetImport()" style="display:none;">🔗 구글시트에서 불러오기</button>
@@ -301,6 +306,7 @@
 <div id="leaveStatus" style="max-width:1200px; margin:10px auto 8px; padding:0 32px; font-size:12.5px; color:var(--mist); display:none;"></div>
 <div id="leaveLedgerTable" style="max-width:1200px; margin:0 auto 20px; padding:0 32px; display:none;"></div>
 <div id="workGrid" style="max-width:1200px; margin:0 auto 20px; padding:0 32px; display:none;"></div>
+<div id="unitCostContent" style="max-width:1200px; margin:20px auto 20px; padding:0 32px; display:none;"></div>
 
 <div id="content"></div>
 </div>
@@ -612,6 +618,193 @@
   </div>
 </div>
 
+<!-- ===== 인당 단가: 프로젝트 추가/수정 ===== -->
+<div class="overlay" id="overlay-ucProject">
+  <div class="modal">
+    <h2 id="modalTitle-ucProject">프로젝트 추가</h2>
+    <input type="hidden" id="ucp_editId">
+    <div class="field"><label>프로젝트 이름 (노션 프로젝트와 같은 이름)</label><input id="ucp_name" list="ucp_name_list" placeholder="예: 2026년 DB 핸즈온"><datalist id="ucp_name_list"></datalist></div>
+    <div class="field"><label>연도</label><input id="ucp_year" list="ucp_year_list" placeholder="예: 2026 또는 진행중"><datalist id="ucp_year_list"><option value="진행중"><option value="2026"><option value="2025"><option value="2024"></datalist></div>
+    <div class="field"><label>📷 사진폴더 링크 (선택)</label><input id="ucp_photoFolderUrl" placeholder="예: 네이버클라우드/원드라이브 폴더 주소"></div>
+    <div class="field"><label>📁 작업폴더 링크 (선택)</label><input id="ucp_workFolderUrl" placeholder="예: 네이버클라우드/원드라이브 폴더 주소"></div>
+    <label style="display:flex; align-items:center; gap:8px; font-size:13px; margin-bottom:14px;">
+      <input type="checkbox" id="ucp_hidden" style="width:auto;"> 목록에서 숨기기 (완료된 프로젝트 등, 나중에 다시 보이게 할 수 있어요)
+    </label>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeModal('ucProject')">취소</button>
+      <button class="btn" id="ucp_saveBtn" onclick="saveUnitCostProject()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 인당 단가: 구매내역 추가/수정 ===== -->
+<div class="overlay" id="overlay-ucPurchase">
+  <div class="modal">
+    <h2 id="modalTitle-ucPurchase">구매내역 추가</h2>
+    <input type="hidden" id="ucr_editId">
+    <div class="field"><label>구매일자</label><input type="date" id="ucr_purchaseDate" min="1900-01-01" max="2099-12-31"></div>
+    <div class="field"><label>구매내역</label><input id="ucr_itemDesc" placeholder="예: 패키지 박스"></div>
+    <div class="field"><label>구매수량 (여유분 포함)</label><input type="number" id="ucr_qty" placeholder="예: 12" min="0" step="1" oninput="updateUcPurchasePreview()"></div>
+    <div class="field">
+      <label>유형</label>
+      <select id="ucr_type">
+        <option value="재료비">재료비</option>
+        <option value="인쇄비">인쇄비</option>
+        <option value="패키지비">패키지비</option>
+        <option value="배송비">배송비</option>
+      </select>
+    </div>
+    <div class="field"><label>단가</label><input id="ucr_unitPrice" placeholder="예: 5,000원" oninput="formatAmountInput(this); updateUcPurchasePreview();"></div>
+    <div class="field"><label>배송비 (선택)</label><input id="ucr_shipping" placeholder="예: 3,000원" oninput="formatAmountInput(this); updateUcPurchasePreview();"></div>
+    <div class="field" id="ucr_preview" style="font-size:12.5px; color:var(--mist);"></div>
+    <div class="field"><label>비고 (선택)</label><input id="ucr_note" placeholder="예: 수량은 10인 + 여유분 2"></div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeModal('ucPurchase')">취소</button>
+      <button class="btn" id="ucr_saveBtn" onclick="saveUnitCostPurchase()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 인당 단가: 구매내역 붙여넣기 ===== -->
+<div class="overlay" id="overlay-ucPaste">
+  <div class="modal">
+    <h2>엑셀 내용 붙여넣기</h2>
+    <div class="hint" style="margin-bottom:14px;">엑셀에서 아래 순서로 열을 복사해서 붙여넣어주세요 (탭으로 구분됨, 첫 줄은 헤더여도 자동으로 걸러져요):<br>
+      <b>구매일자 · 품목 · 개수 · 금액(단가) · 합계 · 구분(재료비/인쇄비/패키지비/배송비)</b><br>
+      날짜는 "7/2" 또는 "2026-07-02" 형식 다 가능해요. 유형을 안 적으면 "재료비"로 들어가요.<br>
+      "[DB 7월] 골판지 박스"처럼 앞에 대괄호 태그가 붙어있어도 자동으로 빼고 들어가요.
+    </div>
+    <textarea id="ucPasteArea" style="min-height:200px; font-family:monospace; font-size:12.5px;" placeholder="여기에 엑셀에서 복사한 내용을 붙여넣으세요 (Ctrl+V)"></textarea>
+    <div class="field" id="ucPastePreview" style="font-size:12.5px; color:var(--mist); margin-top:10px;"></div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeModal('ucPaste')">취소</button>
+      <button class="btn" id="ucPasteBtn" onclick="confirmUcPaste()">이 내용으로 추가하기</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 인당 단가: 워킹타임 추가 ===== -->
+<div class="overlay" id="overlay-ucWorktime">
+  <div class="modal">
+    <h2 id="modalTitle-ucWorktime">워킹타임 기록 추가</h2>
+    <input type="hidden" id="ucw_editId">
+    <div class="field"><label>항목명</label><input id="ucw_itemName" placeholder="예: DB 패키지"></div>
+    <div class="field"><label>인원수</label><input type="number" id="ucw_peopleCount" placeholder="예: 2" min="0" step="1" oninput="updateUcWorktimePreview()"></div>
+    <div class="field"><label>1인당 시간</label><input type="number" id="ucw_hoursPerPerson" placeholder="예: 6" min="0" step="0.5" oninput="updateUcWorktimePreview()"></div>
+    <div class="field" id="ucw_preview" style="font-size:12.5px; color:var(--mist);"></div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeModal('ucWorktime')">취소</button>
+      <button class="btn" id="ucw_saveBtn" onclick="saveUnitCostWorktime()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 인당 단가: 프로젝트 리스트 (전체보기/숨긴것 포함) ===== -->
+<div class="overlay" id="overlay-ucProjectList">
+  <div class="modal" style="max-width:640px;">
+    <h2 style="margin:0 0 10px;">🗂 프로젝트 리스트</h2>
+    <div class="hint" style="margin-bottom:14px;">숨긴 프로젝트도 여기서 다 보여요. 선택하면 바로 그 프로젝트로 이동해요.</div>
+    <div id="ucProjectListBody" style="display:flex; flex-direction:column; gap:10px; max-height:400px; overflow-y:auto; margin-bottom:16px;"></div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeModal('ucProjectList')">닫기</button>
+      <button class="btn" onclick="closeModal('ucProjectList'); openUcProjectModal();">+ 새 프로젝트</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 인당 단가: 노션 집행내역 항목 추가 ===== -->
+<div class="overlay" id="overlay-notionEntry">
+  <div class="modal">
+    <h2 style="margin:0 0 6px;">💰 노션에 항목 추가</h2>
+    <div class="hint" id="ne_context" style="margin-bottom:14px;"></div>
+    <div class="field"><label>구매일자</label><input type="date" id="ne_purchaseDate" min="1900-01-01" max="2099-12-31"></div>
+    <div class="field"><label>품목</label><input id="ne_itemDesc" placeholder="예: 골판지 박스"></div>
+    <div class="field"><label>개수</label><input type="number" id="ne_qty" min="0" step="1" oninput="updateNeAmountPreview()"></div>
+    <div class="field"><label>금액(단가)</label><input id="ne_unitPrice" placeholder="예: 5,000원" oninput="formatAmountInput(this); updateNeAmountPreview();"></div>
+    <div class="field" id="ne_preview" style="font-size:12.5px; color:var(--mist);"></div>
+    <div class="field">
+      <label>구분</label>
+      <select id="ne_type">
+        <option value="">선택 안 함</option>
+        <option value="재료비">재료비</option>
+        <option value="인쇄비">인쇄비</option>
+        <option value="패키지비">패키지비</option>
+        <option value="배송비">배송비</option>
+      </select>
+    </div>
+    <div class="field"><label>결제</label><input id="ne_payment" list="ne_payment_list" placeholder="예: 카드, 현금, 세금계산서"><datalist id="ne_payment_list"></datalist></div>
+    <div id="ne_status" style="font-size:13px; margin:8px 0;"></div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeModal('notionEntry')">취소</button>
+      <button class="btn" id="ne_saveBtn" onclick="submitNotionEntry()">노션에 저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 인당 단가: 체크리스트 항목 추가 ===== -->
+<div class="overlay" id="overlay-newTask">
+  <div class="modal">
+    <h2 style="margin:0 0 6px;">🗂 새 태스크 추가</h2>
+    <div class="hint" id="nt_context" style="margin-bottom:14px;"></div>
+    <div class="field"><label>태스크 이름</label><input id="nt_name" placeholder="예: 삼카 5월 베이킹 봉사활동"></div>
+    <div id="nt_status" style="font-size:13px; margin:8px 0;"></div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeModal('newTask')">취소</button>
+      <button class="btn" id="nt_saveBtn" onclick="submitNewTask()">노션에 저장</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay-checklistEntry">
+  <div class="modal">
+    <h2 id="ce_modalTitle" style="margin:0 0 6px;">✅ 체크리스트 항목 추가</h2>
+    <div class="hint" id="ce_context" style="margin-bottom:14px;"></div>
+    <input type="hidden" id="ce_editId">
+    <div class="field" id="ce_task_field"><label>태스크</label><input id="ce_task" list="ce_task_list" placeholder="예: 삼카 5월 베이킹 봉사활동"><datalist id="ce_task_list"></datalist></div>
+    <div class="field"><label>내용</label><input id="ce_name" placeholder="예: 홍보방안"></div>
+    <div class="field"><label>구분</label><input id="ce_category" list="ce_category_list" placeholder="예: 사전준비, 활동당일, 준비물"><datalist id="ce_category_list"></datalist></div>
+    <div class="field"><label>담당 (선택)</label><input id="ce_assignee" placeholder="예: 이정우"></div>
+    <div class="field"><label>데드라인 (선택)</label><input type="date" id="ce_deadline" min="1900-01-01" max="2099-12-31"></div>
+    <div class="field"><label>비고 (선택)</label><input id="ce_note"></div>
+    <div id="ce_status" style="font-size:13px; margin:8px 0;"></div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeModal('checklistEntry')">취소</button>
+      <button class="btn" id="ce_saveBtn" onclick="submitChecklistEntry()">노션에 저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 인당 단가: 태스크 상세보기 ===== -->
+<!-- ===== 인당 단가: 체크리스트 태스크 목록(숨김 관리) ===== -->
+<div class="overlay" id="overlay-checklistTaskList">
+  <div class="modal" style="max-width:560px;">
+    <h2 style="margin:0 0 10px;">📋 체크리스트 리스트</h2>
+    <div class="hint" style="margin-bottom:14px;">숨긴 태스크도 여기서 다시 보이게 할 수 있어요.</div>
+    <div id="ctlBody" style="display:flex; flex-direction:column; gap:8px; max-height:400px; overflow-y:auto; margin-bottom:16px;"></div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeModal('checklistTaskList')">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 인당 단가: 태스크 텍스트/사진 추가 ===== -->
+<div class="overlay" id="overlay-taskContentEntry">
+  <div class="modal">
+    <h2 style="margin:0 0 6px;">📝 텍스트/사진 추가</h2>
+    <div class="hint" id="tce_context" style="margin-bottom:14px;"></div>
+    <input type="hidden" id="tce_taskId">
+    <div class="field"><label>텍스트 (선택, 줄바꿈으로 여러 문단 가능)</label><textarea id="tce_text" rows="4" placeholder="예: 사업 목적&#10;삼성카드 임직원 및 가족과 함께..."></textarea></div>
+    <div class="field"><label>사진 (선택)</label><input type="file" id="tce_image" accept="image/*"></div>
+    <div id="tce_preview" style="margin:8px 0;"></div>
+    <div id="tce_status" style="font-size:13px; margin:8px 0;"></div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeModal('taskContentEntry')">취소</button>
+      <button class="btn" id="tce_saveBtn" onclick="submitTaskContentEntry()">노션에 저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 인당 단가: 프로젝트 관리 ===== -->
 <!-- ===== 강사 관리 모달 ===== -->
 <div class="overlay" id="overlay-instructors">
   <div class="modal">
@@ -930,6 +1123,12 @@
       </div>
       <div class="field">
         <label style="display:flex; align-items:center; gap:8px; font-size:14px; color:var(--ink);">
+          <input type="checkbox" id="emp_isIntern" style="width:auto;"> 인턴 (빈시간 확인 탭에서 주간 상한이 30시간으로 적용돼요)
+        </label>
+      </div>
+      <div class="field"><label>표시 색상 (선택, 체크리스트 담당자 뱃지 등에 쓰여요)</label><input type="color" id="emp_color" style="width:60px; height:36px; padding:2px; cursor:pointer;"></div>
+      <div class="field">
+        <label style="display:flex; align-items:center; gap:8px; font-size:14px; color:var(--ink);">
           <input type="checkbox" id="emp_allowIssue" style="width:auto;"> 뷰어 발급 허용 (체크한 직원만 재직증명서 발급 목록에 뜸)
         </label>
       </div>
@@ -964,33 +1163,64 @@
   </div>
 </div>
 <div class="overlay" id="overlay-settings">
-  <div class="modal">
+  <div class="modal" style="max-width:640px;">
     <h2>⚙ 관리자 설정</h2>
     <div class="field">
       <label>뷰어 로그인 시 보여줄 탭</label>
-      <div style="display:flex; flex-direction:column; gap:8px; padding:6px 0;">
-        <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="contract" style="width:auto;"> 📄 계약서</label>
-        <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="docs" style="width:auto;"> 🏢 회사 기본사항</label>
-        <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="cert" style="width:auto;"> 🏅 자격·수상</label>
-        <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="employ" style="width:auto;"> 🪪 재직증명서</label>
-        <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="official" style="width:auto;"> 📋 공문 작성</label>
-        <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="career" style="width:auto;"> 📜 경력증명서</label>
-        <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="employees" style="width:auto;"> 👤 직원 관리</label>
-        <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="rules" style="width:auto;"> 📖 사내 규정</label>
-        <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="buildings" style="width:auto;"> 🏢 건물 관리</label>
-        <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="tenants" style="width:auto;"> 🧑 입주자 관리</label>
-        <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="movein" style="width:auto;"> 🏠 입주계약서</label>
-        <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="lease" style="width:auto;"> 📜 임대차계약서</label>
-        <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="renewal" style="width:auto;"> 📝 입주계약연장신청서</label>
-        <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="subdelegation" style="width:auto;"> 🔑 제3자 재위탁 승인요청</label>
-        <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="receipts" style="width:auto;"> 🧾 강사 영수증(교육청)</label>
-        <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="salaryReceipts" style="width:auto;"> 🧾 강사 영수증(월급)</label>
-        <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="instructors" style="width:auto;"> 👨‍🏫 강사 관리</label>
-        <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="budget" style="width:auto;"> 💰 예산 정리</label>
-        <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="leave" style="width:auto;"> 🏖 연차 관리</label>
-        <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="comp" style="width:auto;"> 🔄 대체휴무 관리</label>
-        <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="workGP" style="width:auto;"> 🗓 빈시간(공공플랜)</label>
-        <label style="display:flex; align-items:center; gap:8px; font-size:14px;"><input type="checkbox" class="s_tab" value="workHM" style="width:auto;"> 🗓 빈시간(해메체)</label>
+      <div style="display:flex; flex-direction:column; gap:16px; padding:8px 0;">
+        <div>
+          <div style="font-size:12px; font-weight:700; color:var(--gold-deep); margin-bottom:6px;">📁 정량서류</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px 12px;">
+            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="s_tab" value="contract" style="width:auto;"> 📄 계약서</label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="s_tab" value="docs" style="width:auto;"> 🏢 회사 기본사항</label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="s_tab" value="cert" style="width:auto;"> 🏅 자격·수상</label>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:12px; font-weight:700; color:var(--gold-deep); margin-bottom:6px;">🖨 서류발급기</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px 12px;">
+            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="s_tab" value="employ" style="width:auto;"> 🪪 재직증명서</label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="s_tab" value="official" style="width:auto;"> 📋 공문 작성</label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="s_tab" value="career" style="width:auto;"> 📜 경력증명서</label>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:12px; font-weight:700; color:var(--gold-deep); margin-bottom:6px;">👥 인사관리</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px 12px;">
+            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="s_tab" value="leave" style="width:auto;"> 🏖 연차 관리</label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="s_tab" value="comp" style="width:auto;"> 🔄 대체휴무 관리</label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="s_tab" value="workGP" style="width:auto;"> 🗓 빈시간(공공플랜)</label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="s_tab" value="workHM" style="width:auto;"> 🗓 빈시간(해메체)</label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="s_tab" value="employees" style="width:auto;"> 👤 직원 관리</label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="s_tab" value="rules" style="width:auto;"> 📖 사내 규정</label>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:12px; font-weight:700; color:var(--gold-deep); margin-bottom:6px;">🏙 이바구플랫폼</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px 12px;">
+            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="s_tab" value="buildings" style="width:auto;"> 🏢 건물 관리</label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="s_tab" value="tenants" style="width:auto;"> 🧑 입주자 관리</label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="s_tab" value="movein" style="width:auto;"> 🏠 입주계약서</label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="s_tab" value="lease" style="width:auto;"> 📜 임대차계약서</label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="s_tab" value="renewal" style="width:auto;"> 📝 입주계약연장신청서</label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="s_tab" value="subdelegation" style="width:auto;"> 🔑 제3자 재위탁 승인요청</label>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:12px; font-weight:700; color:var(--gold-deep); margin-bottom:6px;">🛠 해메체</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px 12px;">
+            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="s_tab" value="receipts" style="width:auto;"> 🧾 강사 영수증(교육청)</label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="s_tab" value="salaryReceipts" style="width:auto;"> 🧾 강사 영수증(월급)</label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="s_tab" value="instructors" style="width:auto;"> 👨‍🏫 강사 관리</label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="s_tab" value="budget" style="width:auto;"> 💰 예산 정리</label>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:12px; font-weight:700; color:var(--gold-deep); margin-bottom:6px;">📁 프로젝트</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px 12px;">
+            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="s_tab" value="unitcost" style="width:auto;"> 🗂 프로젝트 관리</label>
+          </div>
+        </div>
       </div>
     </div>
     <div class="field">
@@ -1045,8 +1275,8 @@
 </div>
 
 <script>
-const KEYS = { contract:'gongplan_contracts_v1', docs:'gongplan_docs_v1', cert:'gongplan_certs_v1', employ:'gongplan_employ_v1', employees:'gongplan_employees_v1', official:'gongplan_official_v1', buildings:'gongplan_buildings_v1', lease:'gongplan_lease_v1', renewal:'gongplan_renewal_v1', tenants:'gongplan_tenants_v1', subdelegation:'gongplan_subdelegation_v1', movein:'gongplan_movein_v1', instructors:'gongplan_instructors_v1', receipts:'gongplan_receipts_v1', empReceipts:'gongplan_empreceipts_v1', salaryReceipts:'gongplan_salaryreceipts_v1', career:'gongplan_career_v1', rules:'gongplan_rules_v1', budget:'gongplan_budget_v1', budgetAllocations:'gongplan_budgetalloc_v1' };
-let data = { contract:[], docs:[], cert:[], employ:[], employees:[], official:[], buildings:[], lease:[], renewal:[], tenants:[], subdelegation:[], movein:[], instructors:[], receipts:[], empReceipts:[], salaryReceipts:[], career:[], rules:[], budget:[], budgetAllocations:[], settings:{ viewerMode:false, allowedTabs:['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career','rules','budget'], company:{ name:'', ceo:'', address:'', bizNumber:'', issuerName:'', issuerPosition:'', hasSeal:false, hasLogo:false, hasLogo2:false } } };
+const KEYS = { contract:'gongplan_contracts_v1', docs:'gongplan_docs_v1', cert:'gongplan_certs_v1', employ:'gongplan_employ_v1', employees:'gongplan_employees_v1', official:'gongplan_official_v1', buildings:'gongplan_buildings_v1', lease:'gongplan_lease_v1', renewal:'gongplan_renewal_v1', tenants:'gongplan_tenants_v1', subdelegation:'gongplan_subdelegation_v1', movein:'gongplan_movein_v1', instructors:'gongplan_instructors_v1', receipts:'gongplan_receipts_v1', empReceipts:'gongplan_empreceipts_v1', salaryReceipts:'gongplan_salaryreceipts_v1', career:'gongplan_career_v1', rules:'gongplan_rules_v1', budget:'gongplan_budget_v1', budgetAllocations:'gongplan_budgetalloc_v1', unitCostProjects:'gongplan_ucproj_v1', unitCostPurchases:'gongplan_ucpurch_v1', unitCostWorktime:'gongplan_ucwork_v1', notionConfirmations:'gongplan_notionconfirm_v1', hiddenChecklistTasks:'gongplan_hiddentasks_v1' };
+let data = { contract:[], docs:[], cert:[], employ:[], employees:[], official:[], buildings:[], lease:[], renewal:[], tenants:[], subdelegation:[], movein:[], instructors:[], receipts:[], empReceipts:[], salaryReceipts:[], career:[], rules:[], budget:[], budgetAllocations:[], unitCostProjects:[], unitCostPurchases:[], unitCostWorktime:[], notionConfirmations:[], hiddenChecklistTasks:[], settings:{ viewerMode:false, allowedTabs:['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career','rules','budget','unitcost'], company:{ name:'', ceo:'', address:'', bizNumber:'', issuerName:'', issuerPosition:'', hasSeal:false, hasLogo:false, hasLogo2:false } } };
 let currentTab = 'contract';
 let currentCategory = 'docs_cat';
 const TAB_CATEGORY_MAP = {
@@ -1054,7 +1284,7 @@ const TAB_CATEGORY_MAP = {
   employ:'issue_cat', official:'issue_cat', career:'issue_cat',
   leave:'hr_cat', comp:'hr_cat', workGP:'hr_cat', workHM:'hr_cat', employees:'hr_cat', rules:'hr_cat',
   movein:'ibagu_cat', lease:'ibagu_cat', renewal:'ibagu_cat', buildings:'ibagu_cat', tenants:'ibagu_cat', subdelegation:'ibagu_cat',
-  receipts:'hame_cat', salaryReceipts:'hame_cat', instructors:'hame_cat', budget:'hame_cat'
+  receipts:'hame_cat', salaryReceipts:'hame_cat', instructors:'hame_cat', budget:'hame_cat', unitcost:'project_cat'
 };
 
 function setCategory(cat){
@@ -1205,6 +1435,7 @@ function renderWorkGrid(){
   members.forEach(emp => html += `<th>${escapeHtml(emp.name)}</th>`);
   html += `</tr></thead><tbody>`;
 
+  const INTERN_WEEKLY_CAP = 30;
   const totals = {};
   members.forEach(emp => totals[emp.id] = 0);
 
@@ -1218,10 +1449,15 @@ function renderWorkGrid(){
         return;
       }
       const r = calcFreeHours(emp, d, schedule);
-      totals[emp.id] += r.free;
+      let displayFree = r.free;
+      if(emp.isIntern && !r.leave){
+        const remaining = Math.max(0, INTERN_WEEKLY_CAP - totals[emp.id]);
+        displayFree = Math.min(r.free, remaining);
+      }
+      totals[emp.id] += displayFree;
       if(r.leave) html += `<td class="slot-busy">🏠 휴무</td>`;
-      else if(r.free === 0) html += `<td class="slot-busy">0시간</td>`;
-      else html += `<td class="slot-free">${r.free}시간</td>`;
+      else if(displayFree === 0) html += `<td class="slot-busy">0시간</td>`;
+      else html += `<td class="slot-free">${displayFree}시간</td>`;
     });
     html += `</tr>`;
   });
@@ -1949,7 +2185,7 @@ async function saveSettings(){
 function applyRestrictions(){
   const loggedIn = sessionRole !== null;
   const restricted = isRestricted();
-  const allowed = restricted ? data.settings.allowedTabs : ['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career','rules','budget'];
+  const allowed = restricted ? data.settings.allowedTabs : ['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career','rules','budget','unitcost'];
 
   // 세부탭: 권한 + 현재 카테고리 둘 다 만족해야 보임
   document.querySelectorAll('#tabsBar .tab-btn').forEach(btn=>{
@@ -1980,8 +2216,8 @@ function applyRestrictions(){
     });
   }
 
-  document.getElementById('addBtn').style.display = (!loggedIn || currentTab==='leave' || currentTab==='comp' || currentTab==='workGP' || currentTab==='workHM') ? 'none' : ((!restricted || currentTab==='employ') ? 'inline-block' : 'none');
-  document.getElementById('addBtn').textContent = (restricted && currentTab==='employ') ? '🪪 재직증명서 발급' : (currentTab==='salaryReceipts' ? '💰 강사료 일괄 발급' : '+ 새 항목 추가');
+  document.getElementById('addBtn').style.display = (!loggedIn || currentTab==='leave' || currentTab==='comp' || currentTab==='workGP' || currentTab==='workHM') ? 'none' : ((!restricted || currentTab==='employ' || currentTab==='official' || currentTab==='unitcost') ? 'inline-block' : 'none');
+  document.getElementById('addBtn').textContent = (restricted && currentTab==='employ') ? '🪪 재직증명서 발급' : (currentTab==='salaryReceipts' ? '💰 강사료 일괄 발급' : (currentTab==='unitcost' ? '🗂 프로젝트 리스트' : '+ 새 항목 추가'));
   document.getElementById('importBtn').style.display = (loggedIn && !restricted) ? 'inline-block' : 'none';
   document.getElementById('exportBtn').style.display = (loggedIn && !restricted) ? 'inline-block' : 'none';
   document.getElementById('quantExportBtn').style.display = loggedIn ? 'inline-block' : 'none';
@@ -2020,7 +2256,7 @@ function ensureFirebaseAuth(){
     });
   });
 }
-const COLLECTIONS = { contract:'contracts', docs:'docs', cert:'certs', employ:'employment_certificates', employees:'employees', official:'official_docs', buildings:'buildings', lease:'lease_contracts', renewal:'renewal_requests', tenants:'tenants', subdelegation:'subdelegation_requests', movein:'movein_contracts', instructors:'instructors', receipts:'instructor_receipts', empReceipts:'employee_receipts', salaryReceipts:'instructor_salary_receipts', career:'career_certificates', rules:'company_rules', budget:'hamec_budget', budgetAllocations:'hamec_budget_allocations' };
+const COLLECTIONS = { contract:'contracts', docs:'docs', cert:'certs', employ:'employment_certificates', employees:'employees', official:'official_docs', buildings:'buildings', lease:'lease_contracts', renewal:'renewal_requests', tenants:'tenants', subdelegation:'subdelegation_requests', movein:'movein_contracts', instructors:'instructors', receipts:'instructor_receipts', empReceipts:'employee_receipts', salaryReceipts:'instructor_salary_receipts', career:'career_certificates', rules:'company_rules', budget:'hamec_budget', budgetAllocations:'hamec_budget_allocations', unitCostProjects:'hamec_unitcost_projects', unitCostPurchases:'hamec_unitcost_purchases', unitCostWorktime:'hamec_unitcost_worktime', notionConfirmations:'gongplan_notion_confirmations', hiddenChecklistTasks:'gongplan_hidden_tasks' };
 
 function updateSyncStatus(msg){
   document.getElementById('syncStatus').textContent = msg || '';
@@ -2142,6 +2378,36 @@ async function initFirebaseSync(){
     render();
   }, err => { console.error(err); updateSyncStatus('🔴 과목별 예산 동기화 실패: ' + err.message); });
 
+  db.collection('hamec_unitcost_projects').onSnapshot(snap => {
+    data.unitCostProjects = snap.docs.map(d => fixUnitCostProjectItem(d.data()));
+    localStorage.setItem(KEYS.unitCostProjects, JSON.stringify(data.unitCostProjects));
+    render();
+  }, err => { console.error(err); updateSyncStatus('🔴 인당 단가 프로젝트 동기화 실패: ' + err.message); });
+
+  db.collection('hamec_unitcost_purchases').onSnapshot(snap => {
+    data.unitCostPurchases = snap.docs.map(d => fixUnitCostPurchaseItem(d.data()));
+    localStorage.setItem(KEYS.unitCostPurchases, JSON.stringify(data.unitCostPurchases));
+    render();
+  }, err => { console.error(err); updateSyncStatus('🔴 인당 단가 구매내역 동기화 실패: ' + err.message); });
+
+  db.collection('hamec_unitcost_worktime').onSnapshot(snap => {
+    data.unitCostWorktime = snap.docs.map(d => fixUnitCostWorktimeItem(d.data()));
+    localStorage.setItem(KEYS.unitCostWorktime, JSON.stringify(data.unitCostWorktime));
+    render();
+  }, err => { console.error(err); updateSyncStatus('🔴 워킹타임 동기화 실패: ' + err.message); });
+
+  db.collection('gongplan_notion_confirmations').onSnapshot(snap => {
+    data.notionConfirmations = snap.docs.map(d => fixNotionConfirmationItem(d.data()));
+    localStorage.setItem(KEYS.notionConfirmations, JSON.stringify(data.notionConfirmations));
+    render();
+  }, err => { console.error(err); updateSyncStatus('🔴 확인 체크 동기화 실패: ' + err.message); });
+
+  db.collection('gongplan_hidden_tasks').onSnapshot(snap => {
+    data.hiddenChecklistTasks = snap.docs.map(d => fixHiddenChecklistTaskItem(d.data()));
+    localStorage.setItem(KEYS.hiddenChecklistTasks, JSON.stringify(data.hiddenChecklistTasks));
+    render();
+  }, err => { console.error(err); updateSyncStatus('🔴 체크리스트 숨김 동기화 실패: ' + err.message); });
+
   db.collection('employee_receipts').onSnapshot(snap => {
     data.empReceipts = snap.docs.map(d => fixEmpReceiptItem(d.data()));
     localStorage.setItem(KEYS.empReceipts, JSON.stringify(data.empReceipts));
@@ -2168,7 +2434,7 @@ async function initFirebaseSync(){
   db.collection('settings').doc('main').onSnapshot(snap => {
     if(snap.exists){
       data.settings = snap.data();
-      if(!Array.isArray(data.settings.allowedTabs)) data.settings.allowedTabs = ['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career','rules','budget'];
+      if(!Array.isArray(data.settings.allowedTabs)) data.settings.allowedTabs = ['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career','rules','budget','unitcost'];
       if(!data.settings.company) data.settings.company = { name:'', ceo:'', address:'', bizNumber:'', issuerName:'', issuerPosition:'', hasSeal:false, hasLogo:false, hasLogo2:false };
     }
     applyRestrictions();
@@ -2322,6 +2588,21 @@ function fixBudgetItem(item){
 function fixBudgetAllocationItem(item){
   return { program:'', category:'', amount:0, ...item };
 }
+function fixUnitCostProjectItem(item){
+  return { name:'', year:'', photoFolderUrl:'', workFolderUrl:'', hidden:false, created:0, ...item };
+}
+function fixUnitCostPurchaseItem(item){
+  return { projectId:'', purchaseDate:'', itemDesc:'', qty:'', type:'재료비', unitPrice:'', shipping:'', amount:'', note:'', ...item };
+}
+function fixUnitCostWorktimeItem(item){
+  return { projectId:'', itemName:'', peopleCount:'', hoursPerPerson:'', ...item };
+}
+function fixNotionConfirmationItem(item){
+  return { id:'', confirmed:false, ...item };
+}
+function fixHiddenChecklistTaskItem(item){
+  return { id:'', hidden:false, ...item };
+}
 function fixOfficialItem(item){
   return { docNo:'', effectiveDate:'', recipient:'', via:'', title:'', body:'', subItems:'', contact:'', ...item };
 }
@@ -2391,11 +2672,11 @@ function fixSubdelegationItem(item){
   };
 }
 function fixEmployeeItem(item){
-  return { name:'', rrn:'', address:'', hireDate:'', endDate:'', code:'', position:'', team:'', allowIssue:false, contact:'', bankInfo:'', hasSeal:false, openingBalance:0, accrualOverrides:{}, compAccrualOverrides:{}, confirmedEvents:{}, ...item };
+  return { name:'', rrn:'', address:'', hireDate:'', endDate:'', code:'', position:'', team:'', allowIssue:false, contact:'', bankInfo:'', hasSeal:false, openingBalance:0, accrualOverrides:{}, compAccrualOverrides:{}, confirmedEvents:{}, isIntern:false, color:'', ...item };
 }
 
 function migrateData(d){
-  if(!d) return { contract:[], docs:[], cert:[], employ:[], employees:[], official:[], buildings:[], lease:[], renewal:[], tenants:[], subdelegation:[], movein:[], instructors:[], receipts:[], empReceipts:[], salaryReceipts:[], career:[], rules:[], budget:[], budgetAllocations:[] };
+  if(!d) return { contract:[], docs:[], cert:[], employ:[], employees:[], official:[], buildings:[], lease:[], renewal:[], tenants:[], subdelegation:[], movein:[], instructors:[], receipts:[], empReceipts:[], salaryReceipts:[], career:[], rules:[], budget:[], budgetAllocations:[], unitCostProjects:[], unitCostPurchases:[], unitCostWorktime:[], notionConfirmations:[], hiddenChecklistTasks:[] };
   d.contract = (d.contract||[]).map(fixContractItem);
   d.docs = (d.docs || d.education || []).map(fixDocItem);
   delete d.education;
@@ -2417,10 +2698,15 @@ function migrateData(d){
   d.rules = (d.rules||[]).map(fixRuleItem);
   d.budget = (d.budget||[]).map(fixBudgetItem);
   d.budgetAllocations = (d.budgetAllocations||[]).map(fixBudgetAllocationItem);
+  d.unitCostProjects = (d.unitCostProjects||[]).map(fixUnitCostProjectItem);
+  d.unitCostPurchases = (d.unitCostPurchases||[]).map(fixUnitCostPurchaseItem);
+  d.unitCostWorktime = (d.unitCostWorktime||[]).map(fixUnitCostWorktimeItem);
+  d.notionConfirmations = (d.notionConfirmations||[]).map(fixNotionConfirmationItem);
+  d.hiddenChecklistTasks = (d.hiddenChecklistTasks||[]).map(fixHiddenChecklistTaskItem);
   if(!d.settings || typeof d.settings !== 'object'){
-    d.settings = { viewerMode:false, allowedTabs:['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career','rules','budget'], company:{ name:'', ceo:'', address:'', bizNumber:'', issuerName:'', issuerPosition:'', hasSeal:false, hasLogo:false, hasLogo2:false } };
+    d.settings = { viewerMode:false, allowedTabs:['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career','rules','budget','unitcost'], company:{ name:'', ceo:'', address:'', bizNumber:'', issuerName:'', issuerPosition:'', hasSeal:false, hasLogo:false, hasLogo2:false } };
   }
-  if(!Array.isArray(d.settings.allowedTabs)) d.settings.allowedTabs = ['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career','rules','budget'];
+  if(!Array.isArray(d.settings.allowedTabs)) d.settings.allowedTabs = ['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career','rules','budget','unitcost'];
   d.settings.allowedTabs = d.settings.allowedTabs.map(t => t==='education' ? 'docs' : t);
   if(!d.settings.company) d.settings.company = { name:'', ceo:'', address:'', bizNumber:'', issuerName:'', issuerPosition:'', hasSeal:false, hasLogo:false, hasLogo2:false };
   return d;
@@ -2470,7 +2756,8 @@ function setTab(tab){
   const isLedgerTab = (tab==='leave' || tab==='comp');
   const isWorkTab = (tab==='workGP' || tab==='workHM');
   const isEmployeesTab = (tab==='employees');
-  const isSpecialTab = isLedgerTab || isWorkTab;
+  const isUnitCostTab = (tab==='unitcost');
+  const isSpecialTab = isLedgerTab || isWorkTab || isUnitCostTab;
   document.getElementById('amountFilterBox').style.display = (tab==='contract') ? 'flex' : 'none';
   document.getElementById('yearFilterBox').style.display = (tab==='contract') ? 'flex' : 'none';
   document.getElementById('leaveControlBox').style.display = isLedgerTab ? 'flex' : 'none';
@@ -2488,7 +2775,11 @@ function setTab(tab){
   document.getElementById('budgetSummaryBox').style.display = (tab==='budget') ? 'block' : 'none';
   document.getElementById('budgetSyncStatusBox').style.display = (tab==='budget') ? 'block' : 'none';
   if(tab==='budget'){ populateBudgetFilters(); autoSyncBudgetIfLinked(); }
-  document.getElementById('addBtn').textContent = isEmployeesTab ? '+ 새 직원 추가' : ((isRestricted() && tab==='employ') ? '🪪 재직증명서 발급' : (tab==='salaryReceipts' ? '💰 강사료 일괄 발급' : '+ 새 항목 추가'));
+  document.getElementById('addBtn').textContent = isEmployeesTab ? '+ 새 직원 추가' : ((isRestricted() && tab==='employ') ? '🪪 재직증명서 발급' : (tab==='salaryReceipts' ? '💰 강사료 일괄 발급' : (isUnitCostTab ? '🗂 프로젝트 리스트' : '+ 새 항목 추가')));
+  document.getElementById('addBtn').style.display = 'inline-block';
+  document.getElementById('ucProjectListYearFilter').style.display = isUnitCostTab ? 'inline-block' : 'none';
+
+  document.getElementById('unitCostContent').style.display = isUnitCostTab ? 'block' : 'none';
 
   document.getElementById('searchInput').style.display = isSpecialTab ? 'none' : 'block';
   document.getElementById('sortSelect').style.display = isSpecialTab ? 'none' : 'block';
@@ -2525,12 +2816,18 @@ function openEmployeeEdit(emp){
 function handleAddClick(){
   if(currentTab==='employees'){ openEmployeeManager(); return; }
   if(currentTab==='salaryReceipts'){ openSalaryReceiptModal(); return; }
+  if(currentTab==='unitcost'){ openUcProjectListModal(); return; }
   openModal();
 }
 
 function openModal(doc){
   const tab = currentTab;
-  document.getElementById('overlay-'+tab).classList.add('open');
+  const overlayEl = document.getElementById('overlay-'+tab);
+  if(!overlayEl){
+    console.error('openModal: overlay-'+tab+' 요소를 찾을 수 없어요. 이 탭은 전용 추가 버튼을 써야 할 수 있어요.');
+    return;
+  }
+  overlayEl.classList.add('open');
   if(tab==='contract'){
     document.getElementById('modalTitle-contract').textContent = doc ? '계약서 수정' : '계약서 추가';
     document.getElementById('c_editId').value = doc ? doc.id : '';
@@ -3915,6 +4212,1145 @@ async function saveBudgetAllocations(){
   render();
 }
 
+// ===== 인당 단가 계산 =====
+let currentUnitCostProjectId = null;
+
+function yearSortKey(year){
+  if(year === '진행중') return 99999; // 항상 맨 앞
+  const n = parseInt(year, 10);
+  return isNaN(n) ? -1 : n; // 연도 없음은 맨 뒤
+}
+
+function sortUcProjectsGrouped(list){
+  return list.slice().sort((a,b) => {
+    const ya = yearSortKey(a.year), yb = yearSortKey(b.year);
+    if(ya !== yb) return yb - ya; // 진행중 → 최신연도 → 과거연도
+    return (a.created||0) - (b.created||0);
+  });
+}
+
+function getUnitCostProject(){
+  return data.unitCostProjects.find(p => p.id === currentUnitCostProjectId) || null;
+}
+
+async function openUcProjectModal(doc){
+  document.getElementById('modalTitle-ucProject').textContent = doc ? '프로젝트 수정' : '프로젝트 추가';
+  document.getElementById('ucp_editId').value = doc ? doc.id : '';
+  document.getElementById('ucp_name').value = doc ? doc.name : '';
+  document.getElementById('ucp_year').value = doc ? doc.year : '';
+  document.getElementById('ucp_photoFolderUrl').value = doc ? doc.photoFolderUrl : '';
+  document.getElementById('ucp_workFolderUrl').value = doc ? doc.workFolderUrl : '';
+  document.getElementById('ucp_hidden').checked = doc ? !!doc.hidden : false;
+  document.getElementById('overlay-ucProject').classList.add('open');
+  // 노션 프로젝트 이름 자동완성 목록 채우기 (아직 안 불러왔으면 조용히 시도)
+  try{
+    const rows = await fetchNotionBudget(false);
+    const notionProjects = [...new Set(rows.map(r=>r.projectName).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
+    document.getElementById('ucp_name_list').innerHTML = notionProjects.map(p=>`<option value="${escapeHtml(p)}">`).join('');
+  }catch(e){
+    console.error('노션 프로젝트 목록 불러오기 실패', e);
+  }
+}
+
+async function saveUnitCostProject(){
+  const btn = document.getElementById('ucp_saveBtn');
+  const name = document.getElementById('ucp_name').value.trim();
+  if(!name){ alert('프로젝트 이름을 입력해주세요.'); return; }
+  btn.disabled = true; btn.textContent = '저장 중...';
+  const id = document.getElementById('ucp_editId').value || ('ucp-'+Date.now());
+  const existing = data.unitCostProjects.find(p=>p.id===id);
+  const proj = {
+    id, name,
+    year: document.getElementById('ucp_year').value.trim(),
+    photoFolderUrl: document.getElementById('ucp_photoFolderUrl').value.trim(),
+    workFolderUrl: document.getElementById('ucp_workFolderUrl').value.trim(),
+    hidden: document.getElementById('ucp_hidden').checked,
+    created: existing ? (existing.created || existing.updated || Date.now()) : Date.now(),
+    updated: Date.now()
+  };
+  const idx = data.unitCostProjects.findIndex(p=>p.id===id);
+  if(idx>=0) data.unitCostProjects[idx]=proj; else data.unitCostProjects.push(proj);
+  cacheLocal('unitCostProjects');
+  const ok = await saveItemToFirestore('unitCostProjects', proj);
+  btn.disabled = false; btn.textContent = '저장';
+  if(!ok) return;
+  closeModal('ucProject');
+  currentUnitCostProjectId = id;
+  render();
+}
+
+async function toggleUcProjectHidden(id, hidden){
+  const proj = data.unitCostProjects.find(p=>p.id===id);
+  if(!proj) return;
+  proj.hidden = hidden;
+  proj.updated = Date.now();
+  cacheLocal('unitCostProjects');
+  await saveItemToFirestore('unitCostProjects', proj);
+  render();
+  renderUcProjectListBody();
+}
+
+function openUcProjectListModal(){
+  renderUcProjectListBody();
+  document.getElementById('overlay-ucProjectList').classList.add('open');
+}
+
+let ucProjectListYearFilter = '';
+
+function onUcProjectListYearFilterChange(value){
+  ucProjectListYearFilter = value;
+  currentUnitCostProjectId = null; // 연도 바뀌면 선택 프로젝트 재설정되게
+  render();
+}
+
+function populateUcYearFilterOptions(){
+  const sel = document.getElementById('ucProjectListYearFilter');
+  if(!sel) return;
+  const years = [...new Set(data.unitCostProjects.map(p=>p.year).filter(Boolean))].sort((a,b) => yearSortKey(b)-yearSortKey(a));
+  sel.innerHTML = '<option value="">전체 연도</option>' + years.map(y=>`<option value="${escapeHtml(y)}" ${y===ucProjectListYearFilter?'selected':''}>${escapeHtml(y)}</option>`).join('');
+}
+
+function renderUcProjectListBody(){
+  const el = document.getElementById('ucProjectListBody');
+  if(!el) return;
+  const allProjects = sortUcProjectsGrouped(data.unitCostProjects);
+  populateUcYearFilterOptions();
+
+  const projects = ucProjectListYearFilter ? allProjects.filter(p=>p.year===ucProjectListYearFilter) : allProjects;
+  if(projects.length===0){
+    el.innerHTML = '<div style="font-size:12.5px; color:var(--mist);">해당하는 프로젝트가 없어요.</div>';
+    return;
+  }
+  el.innerHTML = projects.map(p => `
+    <div style="display:flex; justify-content:space-between; align-items:center; border:1px solid var(--line); border-radius:4px; padding:12px 14px; ${p.hidden?'opacity:0.6;':''}">
+      <div>
+        <div style="font-weight:600; font-size:14px;">${p.year ? `<span style="color:var(--gold-deep); font-weight:700;">${escapeHtml(p.year)}</span> · ` : ''}${escapeHtml(p.name)}${p.hidden ? ' 🙈' : ''}</div>
+      </div>
+      <div style="display:flex; gap:6px;">
+        <button class="icon-btn" onclick="toggleUcProjectHidden('${p.id}', ${!p.hidden})">${p.hidden ? '👁 보이기' : '🙈 숨기기'}</button>
+        <button class="icon-btn" onclick="selectUnitCostProject('${p.id}'); closeModal('ucProjectList');">선택</button>
+        <button class="icon-btn" onclick='closeModal("ucProjectList"); openUcProjectModal(${JSON.stringify(p).replace(/'/g,"&#39;")});'>수정</button>
+        <button class="icon-btn del" onclick="handleDeleteUcProjectFromList('${p.id}')">삭제</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function handleDeleteUcProjectFromList(id){
+  await deleteUnitCostProject(id);
+  renderUcProjectListBody();
+}
+
+async function deleteUnitCostProject(id){
+  if(!confirm('이 프로젝트를 삭제할까요? 구매내역·워킹타임 기록도 함께 삭제돼요.')) return;
+  const purchases = data.unitCostPurchases.filter(p=>p.projectId===id);
+  const worktimes = data.unitCostWorktime.filter(w=>w.projectId===id);
+  for(const p of purchases) await deleteItemFromFirestore('unitCostPurchases', p.id);
+  for(const w of worktimes) await deleteItemFromFirestore('unitCostWorktime', w.id);
+  await deleteItemFromFirestore('unitCostProjects', id);
+  data.unitCostPurchases = data.unitCostPurchases.filter(p=>p.projectId!==id);
+  data.unitCostWorktime = data.unitCostWorktime.filter(w=>w.projectId!==id);
+  data.unitCostProjects = data.unitCostProjects.filter(p=>p.id!==id);
+  cacheLocal('unitCostPurchases'); cacheLocal('unitCostWorktime'); cacheLocal('unitCostProjects');
+  if(currentUnitCostProjectId===id) currentUnitCostProjectId = null;
+  render();
+}
+
+function selectUnitCostProject(id){
+  currentUnitCostProjectId = id;
+  ucNotionTagFilter = '';
+  expandedChecklistTasks = new Set();
+  render();
+}
+
+async function toggleUcIncludeShipping(checked){
+  const proj = getUnitCostProject();
+  if(!proj) return;
+  proj.includeShippingInSpent = checked;
+  await saveItemToFirestore('unitCostProjects', proj);
+  render();
+}
+
+function updateUcPurchasePreview(){
+  const qty = parseFloat(document.getElementById('ucr_qty').value) || 0;
+  const unitPrice = parseAmount(document.getElementById('ucr_unitPrice').value);
+  const shipping = parseAmount(document.getElementById('ucr_shipping').value);
+  const amount = Math.round(qty*unitPrice + shipping);
+  const proj = getUnitCostProject();
+  const perPerson = (proj && proj.peopleCount) ? Math.round(amount/proj.peopleCount) : null;
+  const box = document.getElementById('ucr_preview');
+  box.innerHTML = `금액: <b>${amount.toLocaleString('ko-KR')}원</b>` + (perPerson!==null ? ` · 개당단가(÷인원수): <b>${perPerson.toLocaleString('ko-KR')}원</b>` : '');
+}
+
+function openUcPurchaseModal(doc){
+  const proj = getUnitCostProject();
+  if(!proj){ alert('먼저 프로젝트를 선택하거나 추가해주세요.'); return; }
+  document.getElementById('modalTitle-ucPurchase').textContent = doc ? '구매내역 수정' : '구매내역 추가';
+  document.getElementById('ucr_editId').value = doc ? doc.id : '';
+  document.getElementById('ucr_purchaseDate').value = doc ? doc.purchaseDate : '';
+  document.getElementById('ucr_itemDesc').value = doc ? doc.itemDesc : '';
+  document.getElementById('ucr_qty').value = doc ? doc.qty : '';
+  document.getElementById('ucr_type').value = doc ? doc.type : '재료비';
+  document.getElementById('ucr_unitPrice').value = doc ? doc.unitPrice : '';
+  document.getElementById('ucr_shipping').value = doc ? doc.shipping : '';
+  document.getElementById('ucr_note').value = doc ? doc.note : '';
+  updateUcPurchasePreview();
+  document.getElementById('overlay-ucPurchase').classList.add('open');
+}
+
+async function saveUnitCostPurchase(){
+  const proj = getUnitCostProject();
+  if(!proj) return;
+  const btn = document.getElementById('ucr_saveBtn');
+  const itemDesc = document.getElementById('ucr_itemDesc').value.trim();
+  if(!itemDesc){ alert('구매내역(품명)을 입력해주세요.'); return; }
+  btn.disabled = true; btn.textContent = '저장 중...';
+  const id = document.getElementById('ucr_editId').value || ('ucr-'+Date.now());
+  const qty = parseFloat(document.getElementById('ucr_qty').value) || 0;
+  const unitPrice = parseAmount(document.getElementById('ucr_unitPrice').value);
+  const shipping = parseAmount(document.getElementById('ucr_shipping').value);
+  const item = {
+    id, projectId: proj.id,
+    purchaseDate: document.getElementById('ucr_purchaseDate').value,
+    itemDesc, qty,
+    type: document.getElementById('ucr_type').value,
+    unitPrice, shipping,
+    amount: Math.round(qty*unitPrice + shipping),
+    note: document.getElementById('ucr_note').value.trim(),
+    updated: Date.now()
+  };
+  const idx = data.unitCostPurchases.findIndex(p=>p.id===id);
+  if(idx>=0) data.unitCostPurchases[idx]=item; else data.unitCostPurchases.push(item);
+  cacheLocal('unitCostPurchases');
+  const ok = await saveItemToFirestore('unitCostPurchases', item);
+  btn.disabled = false; btn.textContent = '저장';
+  if(!ok) return;
+  closeModal('ucPurchase');
+  render();
+}
+
+async function deleteUnitCostPurchase(id){
+  if(!confirm('이 구매내역을 삭제할까요?')) return;
+  await deleteItemFromFirestore('unitCostPurchases', id);
+  data.unitCostPurchases = data.unitCostPurchases.filter(p=>p.id!==id);
+  cacheLocal('unitCostPurchases');
+  render();
+}
+
+function openUcPasteModal(){
+  const proj = getUnitCostProject();
+  if(!proj){ alert('먼저 프로젝트를 선택하거나 추가해주세요.'); return; }
+  document.getElementById('ucPasteArea').value = '';
+  document.getElementById('ucPastePreview').textContent = '';
+  document.getElementById('overlay-ucPaste').classList.add('open');
+}
+
+function stripBracketTag(str){
+  // "[DB 7월] 실제내용" 처럼 노션에서 붙는 대괄호 태그를 앞에서 제거
+  return (str||'').replace(/^\s*\[[^\]]*\]\s*/, '').trim();
+}
+
+async function confirmUcPaste(){
+  const proj = getUnitCostProject();
+  if(!proj) return;
+  const raw = document.getElementById('ucPasteArea').value;
+  const lines = raw.split('\n').map(l=>l.replace(/\r$/,'')).filter(l=>l.trim());
+  const validTypes = ['재료비','인쇄비','패키지비','배송비'];
+  const nowYear = new Date().getFullYear();
+  const rows = [];
+  lines.forEach(line => {
+    const cols = line.split('\t');
+    const itemDesc = stripBracketTag(cols[1]);
+    if(!itemDesc || itemDesc==='품목' || itemDesc==='구매내역') return; // 헤더행 걸러냄
+    const qty = parseBudgetNumber(cols[2]);
+    const unitPrice = parseBudgetNumber(cols[3]);
+    const amount = parseBudgetNumber(cols[4]); // "합계" 값을 그대로 사용
+    let type = (cols[5]||'').trim();
+    if(!validTypes.includes(type)) type = '재료비';
+    rows.push({
+      purchaseDate: parseBudgetDate(cols[0], nowYear),
+      itemDesc, qty, type, unitPrice,
+      shipping: 0,
+      amount: amount || Math.round(qty*unitPrice),
+      note: ''
+    });
+  });
+  if(rows.length===0){ alert('붙여넣은 내용에서 항목을 찾지 못했어요.'); return; }
+
+  const btn = document.getElementById('ucPasteBtn');
+  btn.disabled = true; btn.textContent = '추가하는 중...';
+  for(const row of rows){
+    const item = { id:'ucr-'+Date.now()+'-'+Math.random().toString(36).slice(2,7), projectId: proj.id, updated: Date.now(), ...row };
+    data.unitCostPurchases.push(item);
+    await saveItemToFirestore('unitCostPurchases', item);
+  }
+  cacheLocal('unitCostPurchases');
+  btn.disabled = false; btn.textContent = '이 내용으로 추가하기';
+  closeModal('ucPaste');
+  render();
+  alert(`${rows.length}개 항목을 추가했어요.`);
+}
+
+function updateUcWorktimePreview(){
+  const people = parseFloat(document.getElementById('ucw_peopleCount').value) || 0;
+  const hours = parseFloat(document.getElementById('ucw_hoursPerPerson').value) || 0;
+  document.getElementById('ucw_preview').innerHTML = `총 사용시간: <b>${(people*hours).toLocaleString('ko-KR')}시간</b>`;
+}
+
+function openUcWorktimeModal(doc){
+  const proj = getUnitCostProject();
+  if(!proj){ alert('먼저 프로젝트를 선택하거나 추가해주세요.'); return; }
+  document.getElementById('modalTitle-ucWorktime').textContent = doc ? '워킹타임 수정' : '워킹타임 기록 추가';
+  document.getElementById('ucw_editId').value = doc ? doc.id : '';
+  document.getElementById('ucw_itemName').value = doc ? doc.itemName : '';
+  document.getElementById('ucw_peopleCount').value = doc ? doc.peopleCount : '';
+  document.getElementById('ucw_hoursPerPerson').value = doc ? doc.hoursPerPerson : '';
+  updateUcWorktimePreview();
+  document.getElementById('overlay-ucWorktime').classList.add('open');
+}
+
+async function saveUnitCostWorktime(){
+  const proj = getUnitCostProject();
+  if(!proj) return;
+  const btn = document.getElementById('ucw_saveBtn');
+  const itemName = document.getElementById('ucw_itemName').value.trim();
+  if(!itemName){ alert('항목명을 입력해주세요.'); return; }
+  btn.disabled = true; btn.textContent = '저장 중...';
+  const id = document.getElementById('ucw_editId').value || ('ucw-'+Date.now());
+  const item = {
+    id, projectId: proj.id, itemName,
+    peopleCount: parseFloat(document.getElementById('ucw_peopleCount').value) || 0,
+    hoursPerPerson: parseFloat(document.getElementById('ucw_hoursPerPerson').value) || 0,
+    updated: Date.now()
+  };
+  const idx = data.unitCostWorktime.findIndex(w=>w.id===id);
+  if(idx>=0) data.unitCostWorktime[idx]=item; else data.unitCostWorktime.push(item);
+  cacheLocal('unitCostWorktime');
+  const ok = await saveItemToFirestore('unitCostWorktime', item);
+  btn.disabled = false; btn.textContent = '저장';
+  if(!ok) return;
+  closeModal('ucWorktime');
+  render();
+}
+
+async function deleteUnitCostWorktime(id){
+  if(!confirm('이 워킹타임 기록을 삭제할까요?')) return;
+  await deleteItemFromFirestore('unitCostWorktime', id);
+  data.unitCostWorktime = data.unitCostWorktime.filter(w=>w.id!==id);
+  cacheLocal('unitCostWorktime');
+  render();
+}
+
+function renderUnitCost(){
+  const container = document.getElementById('unitCostContent');
+  if(!container) return;
+
+  populateUcYearFilterOptions();
+
+  const allProjects = sortUcProjectsGrouped(data.unitCostProjects);
+  const visibleProjects = allProjects.filter(p=>!p.hidden && (!ucProjectListYearFilter || p.year===ucProjectListYearFilter));
+  if((!currentUnitCostProjectId || !visibleProjects.find(p=>p.id===currentUnitCostProjectId)) && visibleProjects.length>0) currentUnitCostProjectId = visibleProjects[0].id;
+  if(visibleProjects.length===0) currentUnitCostProjectId = null;
+  const proj = getUnitCostProject();
+
+  // 연도별로 그룹 묶어서 표시 (진행중 → 최신연도 → 과거연도)
+  const yearGroups = [];
+  visibleProjects.forEach(p => {
+    const label = p.year || '(연도 없음)';
+    let grp = yearGroups.find(g => g.label === label);
+    if(!grp){ grp = { label, items: [] }; yearGroups.push(grp); }
+    grp.items.push(p);
+  });
+
+  const projectTabsHtml = yearGroups.map(grp => `
+    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
+      <span style="font-size:12px; font-weight:700; color:var(--gold-deep); min-width:56px;">${escapeHtml(grp.label)}</span>
+      ${grp.items.map(p => `<button class="chip ${p.id===currentUnitCostProjectId?'active':''}" onclick="selectUnitCostProject('${p.id}')">${escapeHtml(p.name)}</button>`).join('')}
+    </div>
+  `).join('');
+
+  let body = `
+    <div style="margin-bottom:20px;">
+      ${projectTabsHtml}
+      <span style="font-size:12px; color:var(--mist);">전체 목록·숨긴 프로젝트는 상단 "🗂 프로젝트 리스트" 버튼에서 볼 수 있어요</span>
+    </div>
+  `;
+
+  if(!proj){
+    body += `<div class="empty" style="padding:40px 20px; text-align:center; color:var(--mist);">상단 "🗂 프로젝트 리스트"에서 프로젝트를 먼저 추가해주세요.</div>`;
+    container.innerHTML = body;
+    return;
+  }
+
+  body += `
+    <div style="display:flex; justify-content:space-between; align-items:center; background:var(--paper-2); border-radius:6px; padding:14px 18px; margin-bottom:20px;">
+      <div>
+        <h3 style="margin:0 0 4px;">${escapeHtml(proj.name)}</h3>
+        <div style="font-size:13px; color:var(--mist);">${escapeHtml(proj.year || '연도 없음')}</div>
+      </div>
+      <div style="display:flex; gap:6px;">
+        <button class="icon-btn" onclick="toggleUcProjectHidden('${proj.id}', ${!proj.hidden})">${proj.hidden ? '👁 보이기' : '🙈 숨기기'}</button>
+        <button class="icon-btn" onclick='openUcProjectModal(${JSON.stringify(proj).replace(/'/g,"&#39;")})'>수정</button>
+        <button class="icon-btn del" onclick="deleteUnitCostProject('${proj.id}')">삭제</button>
+      </div>
+    </div>
+  `;
+
+  if(proj.photoFolderUrl || proj.workFolderUrl){
+    body += `
+    <div style="display:flex; gap:14px; margin-bottom:20px;">
+      ${proj.photoFolderUrl ? `
+      <a href="${escapeHtml(proj.photoFolderUrl)}" target="_blank" rel="noopener" style="flex:1; display:flex; align-items:center; gap:14px; background:var(--paper-2); border-radius:8px; padding:20px 22px; text-decoration:none; color:inherit; border:1px solid var(--line);">
+        <span style="font-size:32px;">📷</span>
+        <span>
+          <div style="font-size:15px; font-weight:700;">사진폴더</div>
+          <div style="font-size:12px; color:var(--mist);">클릭해서 열기</div>
+        </span>
+      </a>` : ''}
+      ${proj.workFolderUrl ? `
+      <a href="${escapeHtml(proj.workFolderUrl)}" target="_blank" rel="noopener" style="flex:1; display:flex; align-items:center; gap:14px; background:var(--paper-2); border-radius:8px; padding:20px 22px; text-decoration:none; color:inherit; border:1px solid var(--line);">
+        <span style="font-size:32px;">📁</span>
+        <span>
+          <div style="font-size:15px; font-weight:700;">작업폴더</div>
+          <div style="font-size:12px; color:var(--mist);">클릭해서 열기</div>
+        </span>
+      </a>` : ''}
+    </div>
+    `;
+  }
+
+  body += `
+    <div style="display:flex; justify-content:space-between; align-items:center; margin:20px 0 10px;">
+      <h3 style="margin:0;">✅ 체크리스트</h3>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <button class="btn secondary" onclick="openChecklistTaskListModal()">📋 체크리스트 리스트</button>
+        <button class="btn secondary" onclick="openNewTaskModal()">+ 새 태스크 추가</button>
+        <button class="btn secondary" onclick="refreshUcChecklistSection()">🔄 새로고침</button>
+      </div>
+    </div>
+    <div id="ucChecklistSection">불러오는 중...</div>
+
+    <div style="display:flex; justify-content:space-between; align-items:center; margin:20px 0 10px;">
+      <h3 style="margin:0;">📒 노션 집행내역</h3>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <select id="ucNotionMonthFilter" onchange="onUcNotionMonthFilterChange(this.value)">
+          <option value="">전체</option>
+        </select>
+        <button class="btn secondary" onclick="openNotionEntryModal()">+ 항목 추가</button>
+        <button class="btn secondary" onclick="refreshUcNotionSection()">🔄 새로고침</button>
+      </div>
+    </div>
+    <div id="ucNotionSection">불러오는 중...</div>
+  `;
+
+  container.innerHTML = body;
+  renderUcChecklistSection();
+  renderUcNotionSection();
+}
+
+// ===== 노션 집행내역 =====
+const NOTION_BUDGET_URL = 'https://getnotionbudget-7zzdygttea-du.a.run.app';
+let notionBudgetCache = null;
+
+async function fetchNotionBudget(force){
+  if(notionBudgetCache && !force) return notionBudgetCache;
+  const resp = await fetch(NOTION_BUDGET_URL);
+  const data = await resp.json();
+  if(!data.ok) throw new Error(data.error || '알 수 없는 오류');
+  notionBudgetCache = data.rows.filter(r => (r.itemDescRaw || r.itemDesc || '').trim());
+  return notionBudgetCache;
+}
+
+const NOTION_WRITE_URL = 'https://asia-northeast3-publicplan-712ec.cloudfunctions.net/writeNotionBudget';
+
+
+let ucNotionTagFilter = '';
+
+function notionRowsForCurrentProject(rows){
+  const proj = getUnitCostProject();
+  if(!proj || !proj.name) return [];
+  return rows.filter(r => r.projectName === proj.name).sort((a,b)=>(a.purchaseDate||'').localeCompare(b.purchaseDate||''));
+}
+
+function extractMonthNumber(tag){
+  const m = (tag||'').match(/(\d{1,2})\s*월/);
+  return m ? parseInt(m[1], 10) : null;
+}
+
+function populateUcNotionTagFilter(allProjectRows){
+  const sel = document.getElementById('ucNotionMonthFilter');
+  if(!sel) return;
+  const tags = [...new Set(allProjectRows.map(r => r.projectTagFromName).filter(Boolean))].sort((a,b) => {
+    const ma = extractMonthNumber(a), mb = extractMonthNumber(b);
+    if(ma!==null && mb!==null && ma!==mb) return ma-mb; // 월 숫자 기준 오름차순
+    if(ma!==null && mb===null) return -1;
+    if(ma===null && mb!==null) return 1;
+    return a.localeCompare(b,'ko');
+  });
+  sel.innerHTML = '<option value="">전체</option>' + tags.map(t => `<option value="${escapeHtml(t)}" ${t===ucNotionTagFilter?'selected':''}>${escapeHtml(t)}</option>`).join('');
+}
+
+function onUcNotionMonthFilterChange(value){
+  ucNotionTagFilter = value;
+  renderUcNotionSectionTable(notionRowsForCurrentProject(notionBudgetCache || []));
+}
+
+function renderUcNotionSectionTable(allRows){
+  const el = document.getElementById('ucNotionSection');
+  if(!el) return;
+  populateUcNotionTagFilter(allRows);
+  const rows = ucNotionTagFilter ? allRows.filter(r => r.projectTagFromName === ucNotionTagFilter) : allRows;
+  const total = rows.reduce((s,r)=>s+(r.amount||0),0);
+  if(rows.length===0){
+    el.innerHTML = `<div class="empty" style="padding:16px; text-align:center; color:var(--mist);">이 프로젝트에 해당하는 노션 집행내역이 없어요.</div>`;
+    return;
+  }
+  el.innerHTML = `
+    <div style="background:var(--paper-2); border-radius:6px; padding:12px 16px; margin-bottom:12px; font-size:13.5px;">
+      ${rows.length}건 · 합계 <b style="color:var(--navy);">${total.toLocaleString('ko-KR')}원</b>
+    </div>
+    <div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; font-size:12.5px; white-space:nowrap; table-layout:fixed;">
+      <colgroup>
+        <col style="width:95px;"><col><col style="width:60px;"><col style="width:100px;"><col style="width:80px;"><col style="width:80px;"><col style="width:110px;">
+      </colgroup>
+      <thead><tr style="background:var(--paper-2);">
+        <th style="padding:8px 10px; text-align:left; border-bottom:2px solid var(--line);">구매일자</th>
+        <th style="padding:8px 10px; text-align:left; border-bottom:2px solid var(--line);">품목</th>
+        <th style="padding:8px 10px; text-align:right; border-bottom:2px solid var(--line);">개수</th>
+        <th style="padding:8px 10px; text-align:right; border-bottom:2px solid var(--line);">합계</th>
+        <th style="padding:8px 10px; text-align:left; border-bottom:2px solid var(--line);">구분</th>
+        <th style="padding:8px 10px; text-align:left; border-bottom:2px solid var(--line);">결제</th>
+        <th style="padding:8px 10px; text-align:center; border-bottom:2px solid var(--line);">확인(대시보드)</th>
+      </tr></thead><tbody>
+      ${rows.map(r => `
+        <tr style="border-bottom:1px solid var(--line);">
+          <td style="padding:7px 10px;">${escapeHtml(r.purchaseDate||'-')}</td>
+          <td style="padding:7px 10px; white-space:normal; min-width:140px;">${escapeHtml(r.itemDescRaw||r.itemDesc||'-')}</td>
+          <td style="padding:7px 10px; text-align:right;">${r.qty||0}</td>
+          <td style="padding:7px 10px; text-align:right; font-weight:700;">${(r.amount||0).toLocaleString('ko-KR')}</td>
+          <td style="padding:7px 10px;">${escapeHtml(r.type||'-')}</td>
+          <td style="padding:7px 10px;">${escapeHtml(r.payment||'-')}</td>
+          <td style="padding:7px 10px; text-align:center;"><input type="checkbox" ${isNotionRowConfirmed(r.id)?'checked':''} onchange="toggleNotionConfirmInProject('${r.id}', this.checked)" style="width:auto;"></td>
+        </tr>
+      `).join('')}
+      </tbody></table></div>
+  `;
+}
+
+async function renderUcNotionSection(){
+  const el = document.getElementById('ucNotionSection');
+  if(!el) return;
+  try{
+    const rows = await fetchNotionBudget(false);
+    renderUcNotionSectionTable(notionRowsForCurrentProject(rows));
+  }catch(err){
+    el.innerHTML = `<div class="empty" style="padding:16px; text-align:center; color:var(--danger);">불러오기 실패: ${escapeHtml(err.message)}</div>`;
+  }
+}
+
+async function refreshUcNotionSection(){
+  const el = document.getElementById('ucNotionSection');
+  if(el) el.innerHTML = '새로고침 중...';
+  try{
+    const rows = await fetchNotionBudget(true);
+    renderUcNotionSectionTable(notionRowsForCurrentProject(rows));
+  }catch(err){
+    if(el) el.innerHTML = `<div class="empty" style="padding:16px; text-align:center; color:var(--danger);">불러오기 실패: ${escapeHtml(err.message)}</div>`;
+  }
+}
+
+async function toggleNotionConfirmInProject(rowId, checked){
+  await toggleNotionConfirm(rowId, checked);
+  renderUcNotionSectionTable(notionRowsForCurrentProject(notionBudgetCache || []));
+}
+
+function openNotionEntryModal(){
+  const proj = getUnitCostProject();
+  if(!proj){ alert('먼저 프로젝트를 선택해주세요.'); return; }
+  document.getElementById('ne_context').innerHTML =
+    `프로젝트: <b>${escapeHtml(proj.name)}</b>` +
+    (ucNotionTagFilter ? ` · 태그: <b>[${escapeHtml(ucNotionTagFilter)}]</b> (품목 앞에 자동으로 붙어요)` : ' · 태그 필터 없음 (품목 그대로 저장돼요)');
+  document.getElementById('ne_purchaseDate').value = '';
+  document.getElementById('ne_itemDesc').value = '';
+  document.getElementById('ne_qty').value = '';
+  document.getElementById('ne_unitPrice').value = '';
+  document.getElementById('ne_type').value = '';
+  document.getElementById('ne_payment').value = '';
+  document.getElementById('ne_status').textContent = '';
+  updateNeAmountPreview();
+  // 결제 자동완성: 이전에 쓰인 결제수단들을 조용히 불러와서 채움
+  fetchNotionBudget(false).then(rows => {
+    const payments = [...new Set(rows.map(r=>r.payment).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
+    const dl = document.getElementById('ne_payment_list');
+    if(dl) dl.innerHTML = payments.map(p=>`<option value="${escapeHtml(p)}">`).join('');
+  }).catch(()=>{});
+  document.getElementById('overlay-notionEntry').classList.add('open');
+}
+
+function updateNeAmountPreview(){
+  const qty = parseFloat(document.getElementById('ne_qty').value) || 0;
+  const unitPrice = parseAmount(document.getElementById('ne_unitPrice').value);
+  const box = document.getElementById('ne_preview');
+  if(!qty && !unitPrice){ box.textContent = ''; return; }
+  box.textContent = `예상 합계: ${(qty*unitPrice).toLocaleString('ko-KR')}원 (실제 값은 노션에서 자동 계산돼요)`;
+}
+
+async function submitNotionEntry(){
+  const proj = getUnitCostProject();
+  if(!proj) return;
+  const rawItemDesc = document.getElementById('ne_itemDesc').value.trim();
+  if(!rawItemDesc){ alert('품목을 입력해주세요.'); return; }
+  const itemDesc = ucNotionTagFilter ? `[${ucNotionTagFilter}] ${rawItemDesc}` : rawItemDesc;
+
+  const btn = document.getElementById('ne_saveBtn');
+  const statusEl = document.getElementById('ne_status');
+  btn.disabled = true; btn.textContent = '저장 중...';
+  statusEl.textContent = '';
+
+  const payload = {
+    projectName: proj.name,
+    purchaseDate: document.getElementById('ne_purchaseDate').value,
+    itemDesc,
+    qty: parseFloat(document.getElementById('ne_qty').value) || undefined,
+    unitPrice: parseAmount(document.getElementById('ne_unitPrice').value) || undefined,
+    type: document.getElementById('ne_type').value,
+    payment: document.getElementById('ne_payment').value.trim(),
+  };
+  try{
+    const resp = await fetch(NOTION_WRITE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const result = await resp.json();
+    if(!result.ok) throw new Error(result.error || '알 수 없는 오류');
+    btn.disabled = false; btn.textContent = '노션에 저장';
+    closeModal('notionEntry');
+    await refreshUcNotionSection();
+  }catch(err){
+    statusEl.style.color = 'var(--danger)';
+    statusEl.textContent = '❌ 저장 실패: ' + err.message;
+    btn.disabled = false; btn.textContent = '노션에 저장';
+  }
+}
+
+// ===== 체크리스트 =====
+const NOTION_CHECKLIST_URL = 'https://asia-northeast3-publicplan-712ec.cloudfunctions.net/getNotionChecklist';
+const NOTION_CHECKLIST_WRITE_URL = 'https://asia-northeast3-publicplan-712ec.cloudfunctions.net/writeNotionChecklist';
+const NOTION_CREATE_TASK_URL = 'https://asia-northeast3-publicplan-712ec.cloudfunctions.net/createNotionTask';
+
+function openNewTaskModal(){
+  const proj = getUnitCostProject();
+  if(!proj){ alert('먼저 프로젝트를 선택해주세요.'); return; }
+  document.getElementById('nt_context').innerHTML = `프로젝트: <b>${escapeHtml(proj.name)}</b>`;
+  document.getElementById('nt_name').value = '';
+  document.getElementById('nt_status').textContent = '';
+  document.getElementById('overlay-newTask').classList.add('open');
+}
+
+async function submitNewTask(){
+  const proj = getUnitCostProject();
+  if(!proj) return;
+  const taskName = document.getElementById('nt_name').value.trim();
+  if(!taskName){ alert('태스크 이름을 입력해주세요.'); return; }
+
+  const btn = document.getElementById('nt_saveBtn');
+  const statusEl = document.getElementById('nt_status');
+  btn.disabled = true; btn.textContent = '저장 중...';
+  statusEl.textContent = '';
+
+  try{
+    const resp = await fetch(NOTION_CREATE_TASK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ taskName, projectName: proj.name })
+    });
+    const result = await resp.json();
+    if(!result.ok) throw new Error(result.error || '알 수 없는 오류');
+    btn.disabled = false; btn.textContent = '노션에 저장';
+    closeModal('newTask');
+    expandedChecklistTasks.add(taskName);
+    openChecklistEntryModal(taskName); // 태스크 방금 만들었으니, 바로 첫 체크리스트 항목 입력으로 이어감
+  }catch(err){
+    statusEl.style.color = 'var(--danger)';
+    statusEl.textContent = '❌ 저장 실패: ' + err.message;
+    btn.disabled = false; btn.textContent = '노션에 저장';
+  }
+}
+
+const NOTION_CHECKLIST_TOGGLE_URL = 'https://asia-northeast3-publicplan-712ec.cloudfunctions.net/toggleNotionChecklist';
+let notionChecklistCache = null; // { rows, tasks }
+
+async function fetchNotionChecklist(force){
+  if(notionChecklistCache && !force) return notionChecklistCache;
+  const resp = await fetch(NOTION_CHECKLIST_URL);
+  const data = await resp.json();
+  if(!data.ok) throw new Error(data.error || '알 수 없는 오류');
+  notionChecklistCache = { rows: data.rows, tasks: data.tasks };
+  return notionChecklistCache;
+}
+
+function checklistRowsForCurrentProject(rows){
+  const proj = getUnitCostProject();
+  if(!proj || !proj.name) return [];
+  return rows.filter(r => r.projectName === proj.name);
+}
+
+let expandedChecklistTasks = new Set(); // 기본은 전부 접힌 상태
+
+function toggleChecklistTaskGroup(label){
+  if(expandedChecklistTasks.has(label)) expandedChecklistTasks.delete(label);
+  else expandedChecklistTasks.add(label);
+  renderUcChecklistTable(checklistRowsForCurrentProject(notionChecklistCache ? notionChecklistCache.rows : []));
+}
+
+const PERSON_COLOR_PALETTE = ['#c0392b','#2980b9','#27ae60','#8e44ad','#d35400','#16a085','#2c3e50','#e67e22','#c2185b','#00838f','#5d4037','#455a64','#7cb342','#6a1b9a','#ef6c00','#00695c'];
+const KNOWN_NAME_PREFIXES = ['공공플랜 ', '해메체 '];
+function cleanPersonName(name){
+  if(!name) return name;
+  for(const prefix of KNOWN_NAME_PREFIXES){
+    if(name.startsWith(prefix)) return name.slice(prefix.length);
+  }
+  return name;
+}
+let personColorAssignment = {};
+function getPersonColor(rawName){
+  const name = cleanPersonName(rawName);
+  const emp = data.employees.find(e => e.name === name);
+  if(emp && emp.color) return emp.color;
+  if(!personColorAssignment[name]){
+    const usedColors = new Set(Object.values(personColorAssignment));
+    const freeColor = PERSON_COLOR_PALETTE.find(c => !usedColors.has(c));
+    personColorAssignment[name] = freeColor || PERSON_COLOR_PALETTE[Object.keys(personColorAssignment).length % PERSON_COLOR_PALETTE.length];
+  }
+  return personColorAssignment[name];
+}
+
+function isTaskHidden(taskId){
+  if(!taskId) return false;
+  const rec = data.hiddenChecklistTasks.find(t => t.id === taskId);
+  return rec ? !!rec.hidden : false;
+}
+
+async function toggleTaskHidden(taskId, hidden){
+  const existing = data.hiddenChecklistTasks.find(t => t.id === taskId);
+  const item = { id: taskId, hidden, updated: Date.now() };
+  if(existing){
+    const idx = data.hiddenChecklistTasks.findIndex(t => t.id === taskId);
+    data.hiddenChecklistTasks[idx] = item;
+  } else {
+    data.hiddenChecklistTasks.push(item);
+  }
+  cacheLocal('hiddenChecklistTasks');
+  await saveItemToFirestore('hiddenChecklistTasks', item);
+  renderUcChecklistTable(checklistRowsForCurrentProject(notionChecklistCache ? notionChecklistCache.rows : []));
+}
+
+function openChecklistTaskListModal(){
+  const proj = getUnitCostProject();
+  if(!proj){ alert('먼저 프로젝트를 선택해주세요.'); return; }
+  const el = document.getElementById('ctlBody');
+  el.innerHTML = '불러오는 중...';
+  document.getElementById('overlay-checklistTaskList').classList.add('open');
+  fetchNotionChecklist(false).then(({rows}) => {
+    const myRows = rows.filter(r => r.projectName === proj.name);
+    const taskMap = {};
+    myRows.forEach(r => {
+      const key = r.taskId || r.taskName || '(태스크 없음)';
+      if(!taskMap[key]) taskMap[key] = { taskId: r.taskId, label: r.taskName || '(태스크 없음)', count: 0 };
+      taskMap[key].count++;
+    });
+    const tasks = Object.values(taskMap);
+    if(tasks.length===0){ el.innerHTML = '<div style="font-size:12.5px; color:var(--mist);">해당하는 태스크가 없어요.</div>'; return; }
+    el.innerHTML = tasks.map(t => {
+      const hidden = isTaskHidden(t.taskId);
+      return `
+        <div style="display:flex; justify-content:space-between; align-items:center; border:1px solid var(--line); border-radius:4px; padding:10px 14px; ${hidden?'opacity:0.55;':''}">
+          <div style="font-size:13.5px;">${escapeHtml(t.label)} <span style="color:var(--mist); font-size:12px;">(${t.count}개 항목)</span></div>
+          ${t.taskId ? `<button class="icon-btn" onclick="toggleTaskHidden('${t.taskId}', ${!hidden}); openChecklistTaskListModal();">${hidden?'👁 보이기':'🙈 숨기기'}</button>` : ''}
+        </div>
+      `;
+    }).join('');
+  }).catch(err => {
+    el.innerHTML = `<div style="color:var(--danger); font-size:12.5px;">불러오기 실패: ${escapeHtml(err.message)}</div>`;
+  });
+}
+
+function renderUcChecklistTable(rows){
+  const el = document.getElementById('ucChecklistSection');
+  if(!el) return;
+  rows = rows.filter(r => !isTaskHidden(r.taskId));
+  if(rows.length===0){
+    el.innerHTML = `<div class="empty" style="padding:16px; text-align:center; color:var(--mist);">이 프로젝트에 해당하는 체크리스트가 없어요. (숨긴 태스크가 있다면 "📋 체크리스트 리스트"에서 확인해보세요)</div>`;
+    return;
+  }
+  const taskGroups = [];
+  rows.forEach(r => {
+    const label = r.taskName || '(태스크 없음)';
+    let g = taskGroups.find(g => g.label === label);
+    if(!g){ g = { label, items: [] }; taskGroups.push(g); }
+    g.items.push(r);
+  });
+
+  const CATEGORY_ORDER = ['사전준비', '행사중', '행사후'];
+  function sortByCategoryOrder(items){
+    return items.slice().sort((a,b) => {
+      const ia = CATEGORY_ORDER.indexOf(a.category), ib = CATEGORY_ORDER.indexOf(b.category);
+      const oa = ia === -1 ? 99 : ia, ob = ib === -1 ? 99 : ib;
+      return oa - ob;
+    });
+  }
+
+  function renderAssignees(names){
+    if(!names || !names.length) return '';
+    return names.map(n => `<span style="display:inline-block; background:${getPersonColor(n)}; color:#fff; border-radius:12px; padding:1px 8px; font-size:11px; margin:1px 2px 1px 0;">${escapeHtml(cleanPersonName(n))}</span>`).join('');
+  }
+
+  function renderCategoryTable(items){
+    return `<div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; font-size:12.5px; table-layout:fixed;">
+      <colgroup><col style="width:36px;"><col><col style="width:150px;"><col style="width:90px;"><col style="width:160px;"><col style="width:50px;"></colgroup>
+      <thead><tr style="background:var(--paper-2);">
+        <th style="padding:6px 8px;"></th>
+        <th style="padding:6px 8px; text-align:left; border-bottom:2px solid var(--line);">내용</th>
+        <th style="padding:6px 8px; text-align:left; border-bottom:2px solid var(--line);">담당</th>
+        <th style="padding:6px 8px; text-align:left; border-bottom:2px solid var(--line);">데드라인</th>
+        <th style="padding:6px 8px; text-align:left; border-bottom:2px solid var(--line);">비고</th>
+        <th style="padding:6px 8px;"></th>
+      </tr></thead><tbody>
+      ${items.map(item => `
+        <tr style="border-bottom:1px solid var(--line);">
+          <td style="padding:6px 8px; text-align:center;"><input type="checkbox" ${item.checked?'checked':''} onchange="toggleChecklistItem('${item.id}', this.checked)" style="width:auto;"></td>
+          <td style="padding:6px 8px; white-space:normal; ${item.checked?'text-decoration:line-through; color:var(--mist);':''}">${escapeHtml(item.name)}</td>
+          <td style="padding:6px 8px; white-space:normal;">${renderAssignees(item.assignees)}</td>
+          <td style="padding:6px 8px;">${escapeHtml(item.deadline||'-')}</td>
+          <td style="padding:6px 8px; white-space:normal; color:var(--mist); font-size:11.5px;">${item.note ? '• '+escapeHtml(item.note) : ''}</td>
+          <td style="padding:6px 8px; text-align:center;"><button class="icon-btn" onclick='openChecklistEntryModal(null, ${JSON.stringify(item).replace(/'/g,"&#39;")})'>수정</button></td>
+        </tr>
+      `).join('')}
+      </tbody></table></div>`;
+  }
+
+  el.innerHTML = taskGroups.map(g => {
+    const isOpen = expandedChecklistTasks.has(g.label);
+    const taskId = g.items[0] ? g.items[0].taskId : null;
+    const catGroups = [];
+    sortByCategoryOrder(g.items).forEach(item => {
+      const catLabel = item.category || '(구분 없음)';
+      let cg = catGroups.find(c => c.label === catLabel);
+      if(!cg){ cg = { label: catLabel, items: [] }; catGroups.push(cg); }
+      cg.items.push(item);
+    });
+    return `
+      <div style="margin-bottom:14px; border:1px solid var(--line); border-radius:6px; overflow:hidden;">
+        <div style="cursor:pointer; padding:10px 14px; background:var(--paper-2); display:flex; align-items:center; justify-content:space-between; gap:8px;">
+          <div onclick="toggleChecklistTaskGroup('${g.label.replace(/'/g,"\\'")}')" style="flex:1; display:flex; align-items:center; gap:8px; font-weight:700; font-size:14px;">
+            <span style="transform:${isOpen?'rotate(90deg)':'rotate(0deg)'}; transition:transform 0.15s; display:inline-block;">▶</span>
+            ${escapeHtml(g.label)}
+            <span style="font-weight:400; font-size:12px; color:var(--mist);">(${g.items.filter(i=>i.checked).length}/${g.items.length} 완료)</span>
+          </div>
+          <button class="icon-btn" onclick="event.stopPropagation(); openChecklistEntryModal('${g.label.replace(/'/g,"\\'")}')">+ 추가</button>
+        </div>
+        ${isOpen ? `<div style="padding:10px 14px;">
+          ${taskId ? `<div id="taskContent-${taskId}" style="margin-bottom:8px; font-size:13px; color:var(--mist);">불러오는 중...</div>
+          <button class="icon-btn" style="margin-bottom:14px;" onclick="openTaskContentEntryModal('${taskId}', '${g.label.replace(/'/g,"\\'")}')">+ 텍스트/사진 추가</button>
+          <button class="icon-btn" style="margin-bottom:14px;" onclick="fillTaskContentInline('${taskId}', true)">🔄 텍스트/사진 새로고침</button>` : ''}
+          ${catGroups.map(cg => `
+            <div style="margin-bottom:10px;">
+              <div style="font-size:12px; font-weight:700; color:var(--gold-deep); margin-bottom:4px;">${escapeHtml(cg.label)}</div>
+              ${renderCategoryTable(cg.items)}
+            </div>
+          `).join('')}
+        </div>` : ''}
+      </div>
+    `;
+  }).join('');
+
+  // 열려있는 태스크들의 텍스트/이미지 내용을 뒤이어 비동기로 채워넣음 (노션 페이지처럼 위→아래로 이어보이게)
+  taskGroups.forEach(g => {
+    const isOpen = expandedChecklistTasks.has(g.label);
+    const taskId = g.items[0] ? g.items[0].taskId : null;
+    if(isOpen && taskId) fillTaskContentInline(taskId);
+  });
+}
+
+async function fillTaskContentInline(taskId, force){
+  const holder = document.getElementById(`taskContent-${taskId}`);
+  if(!holder) return;
+  try{
+    let blocks = force ? null : notionTaskContentCache[taskId];
+    if(!blocks){
+      const resp = await fetch(`${NOTION_TASK_CONTENT_URL}?taskId=${encodeURIComponent(taskId)}`);
+      const result = await resp.json();
+      if(!result.ok) throw new Error(result.error || '알 수 없는 오류');
+      blocks = result.blocks;
+      notionTaskContentCache[taskId] = blocks;
+    }
+    const holderNow = document.getElementById(`taskContent-${taskId}`);
+    if(holderNow) holderNow.innerHTML = renderTaskContentBlocks(blocks, taskId);
+  }catch(err){
+    const holderNow = document.getElementById(`taskContent-${taskId}`);
+    if(holderNow) holderNow.innerHTML = `<div style="color:var(--danger); font-size:12.5px;">텍스트/이미지 불러오기 실패: ${escapeHtml(err.message)}</div>`;
+  }
+}
+
+const NOTION_ADD_TASK_CONTENT_URL = 'https://asia-northeast3-publicplan-712ec.cloudfunctions.net/addNotionTaskContent';
+const NOTION_DELETE_BLOCK_URL = 'https://asia-northeast3-publicplan-712ec.cloudfunctions.net/deleteNotionBlock';
+
+function openTaskContentEntryModal(taskId, taskLabel){
+  document.getElementById('tce_taskId').value = taskId;
+  document.getElementById('tce_context').innerHTML = `태스크: <b>${escapeHtml(taskLabel)}</b>`;
+  document.getElementById('tce_text').value = '';
+  document.getElementById('tce_image').value = '';
+  document.getElementById('tce_preview').innerHTML = '';
+  document.getElementById('tce_status').textContent = '';
+  document.getElementById('overlay-taskContentEntry').classList.add('open');
+}
+
+document.addEventListener('change', function(e){
+  if(e.target && e.target.id === 'tce_image'){
+    const file = e.target.files[0];
+    const preview = document.getElementById('tce_preview');
+    if(!file){ preview.innerHTML = ''; return; }
+    const reader = new FileReader();
+    reader.onload = () => { preview.innerHTML = `<img src="${reader.result}" style="max-width:200px; max-height:150px; border-radius:6px;">`; };
+    reader.readAsDataURL(file);
+  }
+});
+
+function fileToBase64(file){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(',')[1]); // data:...;base64, 이후 부분만
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function submitTaskContentEntry(){
+  const taskId = document.getElementById('tce_taskId').value;
+  const text = document.getElementById('tce_text').value.trim();
+  const imageFile = document.getElementById('tce_image').files[0];
+  if(!text && !imageFile){ alert('텍스트나 사진 중 하나는 입력해주세요.'); return; }
+
+  const btn = document.getElementById('tce_saveBtn');
+  const statusEl = document.getElementById('tce_status');
+  btn.disabled = true; btn.textContent = '저장 중...';
+  statusEl.textContent = '';
+
+  try{
+    const payload = { taskId, text };
+    if(imageFile){
+      payload.imageBase64 = await fileToBase64(imageFile);
+      payload.imageFilename = imageFile.name;
+      payload.imageContentType = imageFile.type || 'image/png';
+    }
+    const resp = await fetch(NOTION_ADD_TASK_CONTENT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const result = await resp.json();
+    if(!result.ok) throw new Error(result.error || '알 수 없는 오류');
+    btn.disabled = false; btn.textContent = '노션에 저장';
+    closeModal('taskContentEntry');
+    delete notionTaskContentCache[taskId]; // 캐시 지워서 다시 불러오게
+    fillTaskContentInline(taskId);
+  }catch(err){
+    statusEl.style.color = 'var(--danger)';
+    statusEl.textContent = '❌ 저장 실패: ' + err.message;
+    btn.disabled = false; btn.textContent = '노션에 저장';
+  }
+}
+
+async function renderUcChecklistSection(){
+  const el = document.getElementById('ucChecklistSection');
+  if(!el) return;
+  try{
+    const { rows } = await fetchNotionChecklist(false);
+    renderUcChecklistTable(checklistRowsForCurrentProject(rows));
+  }catch(err){
+    el.innerHTML = `<div class="empty" style="padding:16px; text-align:center; color:var(--danger);">불러오기 실패: ${escapeHtml(err.message)}</div>`;
+  }
+}
+
+async function refreshUcChecklistSection(){
+  const el = document.getElementById('ucChecklistSection');
+  if(el) el.innerHTML = '새로고침 중...';
+  try{
+    const { rows } = await fetchNotionChecklist(true);
+    renderUcChecklistTable(checklistRowsForCurrentProject(rows));
+  }catch(err){
+    if(el) el.innerHTML = `<div class="empty" style="padding:16px; text-align:center; color:var(--danger);">불러오기 실패: ${escapeHtml(err.message)}</div>`;
+  }
+}
+
+async function toggleChecklistItem(pageId, checked){
+  try{
+    const resp = await fetch(NOTION_CHECKLIST_TOGGLE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pageId, checked })
+    });
+    const result = await resp.json();
+    if(!result.ok) throw new Error(result.error || '알 수 없는 오류');
+    if(notionChecklistCache){
+      const row = notionChecklistCache.rows.find(r => r.id === pageId);
+      if(row) row.checked = checked;
+    }
+  }catch(err){
+    alert('체크 반영 실패: ' + err.message);
+  }
+}
+
+const NOTION_CHECKLIST_UPDATE_URL = 'https://asia-northeast3-publicplan-712ec.cloudfunctions.net/updateNotionChecklist';
+const NOTION_TASK_CONTENT_URL = 'https://asia-northeast3-publicplan-712ec.cloudfunctions.net/getNotionTaskContent';
+let notionTaskContentCache = {}; // taskId -> blocks
+
+const REDUNDANT_HEADING_LABELS = ['사전 준비','사전준비','행사 중','행사중','행사 전','행사전','행사 후','행사후','준비물','활동당일','활동 당일'];
+
+function wrapBlockWithDelete(html, blockId, taskId){
+  if(!html || !blockId) return html;
+  return `<div style="position:relative; padding-right:20px;">${html}<button onclick="deleteTaskContentBlock('${blockId}','${taskId}')" title="이 항목 삭제" style="position:absolute; top:2px; right:0; background:none; border:none; color:var(--mist); cursor:pointer; font-size:14px; line-height:1; padding:2px 4px;">×</button></div>`;
+}
+
+function renderTaskContentBlocks(blocks, taskId){
+  if(!blocks || blocks.length===0) return `<div class="empty" style="padding:16px; text-align:center; color:var(--mist);">이 태스크 페이지에 텍스트 내용이 없어요.</div>`;
+  return blocks.map(b => {
+    if((b.type==='heading_1' || b.type==='heading_2' || b.type==='heading_3') && REDUNDANT_HEADING_LABELS.includes((b.text||'').trim())){
+      return ''; // 체크리스트 표에서 "구분"으로 이미 보여주는 구획 제목은 중복이라 건너뜀
+    }
+    let html = '';
+    if(b.type==='heading_1') html = `<div style="margin:14px 0 6px; font-size:19px; font-weight:700; color:#111;">${escapeHtml(b.text)}</div>`;
+    else if(b.type==='heading_2') html = `<div style="margin:12px 0 6px; font-size:16px; font-weight:700; color:#111;">${escapeHtml(b.text)}</div>`;
+    else if(b.type==='heading_3') html = `<div style="margin:10px 0 4px; font-size:14px; font-weight:700; color:#111;">${escapeHtml(b.text)}</div>`;
+    else if(b.type==='paragraph') html = b.text ? `<p style="margin:0 0 6px; font-size:12px; line-height:1.55; color:#111;">${escapeHtml(b.text)}</p>` : '';
+    else if(b.type==='bulleted_list_item') html = `<div style="font-size:12px; color:#111; margin:2px 0 2px 16px;">• ${escapeHtml(b.text)}</div>`;
+    else if(b.type==='numbered_list_item') html = `<div style="font-size:12px; color:#111; margin:2px 0 2px 16px;">${escapeHtml(b.text)}</div>`;
+    else if(b.type==='callout') html = `<div style="background:var(--paper-2); border-radius:6px; padding:10px 14px; margin:8px 0; font-size:12px; color:#111;">${escapeHtml(b.text)}</div>`;
+    else if(b.type==='toggle') html = `<div style="margin:8px 0;"><div style="font-weight:700; font-size:12.5px; color:#111;">▸ ${escapeHtml(b.text)}</div><div style="margin-left:14px;">${renderTaskContentBlocks(b.children||[], taskId)}</div></div>`;
+    else if(b.type==='table' && Array.isArray(b.rows)) html = `<table style="width:100%; border-collapse:collapse; margin:8px 0; font-size:12px; color:#111;">${b.rows.map(row=>`<tr>${row.map(cell=>`<td style="border:1px solid var(--line); padding:6px 8px;">${escapeHtml(cell)}</td>`).join('')}</tr>`).join('')}</table>`;
+    else if(b.type==='image') html = `<div style="margin:10px 0;"><img src="${escapeHtml(b.url)}" style="max-width:100%; border-radius:6px;">${b.caption?`<div style="font-size:11px; color:var(--mist); margin-top:4px;">${escapeHtml(b.caption)}</div>`:''}</div>`;
+    else if(b.type==='database') return `<div style="font-size:11px; color:var(--mist); margin:6px 0;">📋 ${escapeHtml(b.title||'로컬 표')} (여기서는 표시 안 됨)</div>`;
+    else return '';
+    return wrapBlockWithDelete(html, b.id, taskId);
+  }).join('');
+}
+
+async function deleteTaskContentBlock(blockId, taskId){
+  if(!confirm('이 항목을 삭제할까요? (노션에서도 지워져요)')) return;
+  try{
+    const resp = await fetch(NOTION_DELETE_BLOCK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ blockId })
+    });
+    const result = await resp.json();
+    if(!result.ok) throw new Error(result.error || '알 수 없는 오류');
+    fillTaskContentInline(taskId, true);
+  }catch(err){
+    alert('삭제 실패: ' + err.message);
+  }
+}
+
+function openChecklistEntryModal(prefillTaskName, editItem){
+  const proj = getUnitCostProject();
+  if(!proj){ alert('먼저 프로젝트를 선택해주세요.'); return; }
+
+  document.getElementById('ce_editId').value = editItem ? editItem.id : '';
+  document.getElementById('ce_modalTitle').textContent = editItem ? '✅ 체크리스트 항목 수정' : '✅ 체크리스트 항목 추가';
+  document.getElementById('ce_saveBtn').textContent = editItem ? '수정 저장' : '노션에 저장';
+
+  const knownTaskName = editItem ? editItem.taskName : prefillTaskName;
+  const hasKnownTask = !!(knownTaskName && knownTaskName !== '(태스크 없음)');
+  document.getElementById('ce_task_field').style.display = hasKnownTask ? 'none' : 'block';
+  document.getElementById('ce_task').value = hasKnownTask ? knownTaskName : '';
+
+  document.getElementById('ce_context').innerHTML = editItem
+    ? `프로젝트: <b>${escapeHtml(proj.name)}</b> · 태스크: <b>${escapeHtml(knownTaskName||'-')}</b>`
+    : `프로젝트: <b>${escapeHtml(proj.name)}</b>` + (hasKnownTask ? ` · 태스크: <b>${escapeHtml(knownTaskName)}</b>` : ' · 태스크를 정확히 입력해주세요 (아래 자동완성 참고)');
+
+  document.getElementById('ce_name').value = editItem ? editItem.name : '';
+  document.getElementById('ce_category').value = editItem ? (editItem.category||'') : '';
+  document.getElementById('ce_assignee').value = editItem && editItem.assignees && editItem.assignees.length ? editItem.assignees.join(', ') : '';
+  document.getElementById('ce_deadline').value = editItem ? (editItem.deadline||'') : '';
+  document.getElementById('ce_note').value = editItem ? (editItem.note||'') : '';
+  document.getElementById('ce_status').textContent = '';
+  document.getElementById('ce_category_list').innerHTML = ['사전준비','활동당일','준비물'].map(c=>`<option value="${c}">`).join('');
+
+  if(!hasKnownTask){
+    fetchNotionChecklist(false).then(({rows}) => {
+      const projTaskNames = [...new Set(rows.filter(r=>r.projectName===proj.name).map(r=>r.taskName).filter(Boolean))];
+      const dl = document.getElementById('ce_task_list');
+      if(dl) dl.innerHTML = projTaskNames.map(t=>`<option value="${escapeHtml(t)}">`).join('');
+    }).catch(()=>{});
+  }
+
+  document.getElementById('overlay-checklistEntry').classList.add('open');
+}
+
+async function submitChecklistEntry(){
+  const name = document.getElementById('ce_name').value.trim();
+  if(!name){ alert('내용을 입력해주세요.'); return; }
+  const editId = document.getElementById('ce_editId').value;
+
+  const btn = document.getElementById('ce_saveBtn');
+  const statusEl = document.getElementById('ce_status');
+  btn.disabled = true; btn.textContent = '저장 중...';
+  statusEl.textContent = '';
+
+  const category = document.getElementById('ce_category').value.trim();
+  const assignee = document.getElementById('ce_assignee').value.trim();
+  const deadline = document.getElementById('ce_deadline').value;
+  const note = document.getElementById('ce_note').value.trim();
+
+  try{
+    let resp;
+    if(editId){
+      resp = await fetch(NOTION_CHECKLIST_UPDATE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pageId: editId, name, category, assignee, deadline, note })
+      });
+    } else {
+      const taskName = document.getElementById('ce_task').value.trim();
+      if(!taskName){ alert('태스크를 입력해주세요.'); btn.disabled=false; btn.textContent='노션에 저장'; return; }
+      const proj = getUnitCostProject();
+      resp = await fetch(NOTION_CHECKLIST_WRITE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, category, assignee, deadline, note, taskName, projectName: proj ? proj.name : '' })
+      });
+    }
+    const result = await resp.json();
+    if(!result.ok) throw new Error(result.error || '알 수 없는 오류');
+    btn.disabled = false; btn.textContent = editId ? '수정 저장' : '노션에 저장';
+    closeModal('checklistEntry');
+    await refreshUcChecklistSection();
+  }catch(err){
+    statusEl.style.color = 'var(--danger)';
+    statusEl.textContent = '❌ 저장 실패: ' + err.message;
+    btn.disabled = false; btn.textContent = editId ? '수정 저장' : '노션에 저장';
+  }
+}
+
+function isNotionRowConfirmed(rowId){
+  const rec = data.notionConfirmations.find(c => c.id === rowId);
+  return rec ? !!rec.confirmed : false;
+}
+
+async function toggleNotionConfirm(rowId, checked){
+  const existing = data.notionConfirmations.find(c => c.id === rowId);
+  const item = { id: rowId, confirmed: checked, updated: Date.now() };
+  if(existing){
+    const idx = data.notionConfirmations.findIndex(c => c.id === rowId);
+    data.notionConfirmations[idx] = item;
+  } else {
+    data.notionConfirmations.push(item);
+  }
+  cacheLocal('notionConfirmations');
+  await saveItemToFirestore('notionConfirmations', item);
+}
+
 async function handleGoogleSheetImport(){
   let savedUrl = localStorage.getItem(BUDGET_SHEET_URL_KEY) || '';
   const input = prompt('구글시트 링크를 붙여넣어주세요.\n(시트가 "링크가 있는 모든 사용자 - 뷰어"로 공유되어 있어야 해요)', savedUrl);
@@ -5177,6 +6613,8 @@ function resetEmployeeForm(){
   document.getElementById('emp_position').value = '';
   document.getElementById('emp_openingBalance').value = '';
   document.getElementById('emp_team').value = '';
+  document.getElementById('emp_isIntern').checked = false;
+  document.getElementById('emp_color').value = '#c0392b';
   document.getElementById('emp_allowIssue').checked = false;
   document.getElementById('emp_saveBtn').textContent = '직원 추가';
   document.getElementById('emp_cancelEditBtn').style.display = 'none';
@@ -5193,6 +6631,8 @@ function editEmployeeForm(emp){
   document.getElementById('emp_position').value = emp.position;
   document.getElementById('emp_openingBalance').value = emp.openingBalance || '';
   document.getElementById('emp_team').value = emp.team || '';
+  document.getElementById('emp_isIntern').checked = !!emp.isIntern;
+  document.getElementById('emp_color').value = emp.color || '#c0392b';
   document.getElementById('emp_allowIssue').checked = !!emp.allowIssue;
   document.getElementById('emp_saveBtn').textContent = '수정 저장';
   document.getElementById('emp_cancelEditBtn').style.display = 'inline-block';
@@ -5217,6 +6657,8 @@ async function saveEmployee(){
     position: document.getElementById('emp_position').value.trim(),
     openingBalance: parseFloat(document.getElementById('emp_openingBalance').value) || 0,
     team: document.getElementById('emp_team').value,
+    isIntern: document.getElementById('emp_isIntern').checked,
+    color: document.getElementById('emp_color').value,
     allowIssue: document.getElementById('emp_allowIssue').checked,
     updated: Date.now()
   };
@@ -5617,7 +7059,8 @@ function render(){
   renderWorkGrid();
   if(currentTab==='receipts' || currentTab==='salaryReceipts') populateReceiptMonthSelect();
   if(currentTab==='budget') populateBudgetFilters();
-  if(currentTab==='leave' || currentTab==='comp' || currentTab==='workGP' || currentTab==='workHM') return;
+  if(currentTab==='unitcost') renderUnitCost();
+  if(currentTab==='leave' || currentTab==='comp' || currentTab==='workGP' || currentTab==='workHM' || currentTab==='unitcost') return;
   const search = document.getElementById('searchInput').value.toLowerCase();
   const sort = document.getElementById('sortSelect').value;
   let items = data[currentTab].slice();
