@@ -191,6 +191,7 @@
       <span id="restrictionBadge" class="sub" style="align-self:center; color:var(--gold);"></span>
       <button class="btn ghost" id="loginBtn" onclick="doLogin()">🔐 로그인</button>
       <button class="btn ghost" id="logoutBtn" onclick="doLogout()" style="display:none;">🔓 로그아웃</button>
+      <button class="btn ghost" id="unconfirmedBtn" onclick="openUnconfirmedEventsPopup()" style="display:none;">⚠️ 미확인 항목</button>
       <button class="btn ghost" id="settingsBtn" onclick="openSettings()" style="display:none;">⚙ 설정</button>
       <button class="btn ghost" id="exportBtn" onclick="exportData()">내보내기(백업)</button>
       <button class="btn ghost" id="quantExportBtn" onclick="exportQuantitativeDocs()">📊 정량서류 내보내기</button>
@@ -1166,62 +1167,10 @@
   <div class="modal" style="max-width:640px;">
     <h2>⚙ 관리자 설정</h2>
     <div class="field">
-      <label>뷰어 로그인 시 보여줄 탭</label>
-      <div style="display:flex; flex-direction:column; gap:16px; padding:8px 0;">
-        <div>
-          <div style="font-size:12px; font-weight:700; color:var(--gold-deep); margin-bottom:6px;">📁 정량서류</div>
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px 12px;">
-            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="s_tab" value="contract" style="width:auto;"> 📄 계약서</label>
-            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="s_tab" value="docs" style="width:auto;"> 🏢 회사 기본사항</label>
-            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="s_tab" value="cert" style="width:auto;"> 🏅 자격·수상</label>
-          </div>
-        </div>
-        <div>
-          <div style="font-size:12px; font-weight:700; color:var(--gold-deep); margin-bottom:6px;">🖨 서류발급기</div>
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px 12px;">
-            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="s_tab" value="employ" style="width:auto;"> 🪪 재직증명서</label>
-            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="s_tab" value="official" style="width:auto;"> 📋 공문 작성</label>
-            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="s_tab" value="career" style="width:auto;"> 📜 경력증명서</label>
-          </div>
-        </div>
-        <div>
-          <div style="font-size:12px; font-weight:700; color:var(--gold-deep); margin-bottom:6px;">👥 인사관리</div>
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px 12px;">
-            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="s_tab" value="leave" style="width:auto;"> 🏖 연차 관리</label>
-            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="s_tab" value="comp" style="width:auto;"> 🔄 대체휴무 관리</label>
-            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="s_tab" value="workGP" style="width:auto;"> 🗓 빈시간(공공플랜)</label>
-            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="s_tab" value="workHM" style="width:auto;"> 🗓 빈시간(해메체)</label>
-            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="s_tab" value="employees" style="width:auto;"> 👤 직원 관리</label>
-            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="s_tab" value="rules" style="width:auto;"> 📖 사내 규정</label>
-          </div>
-        </div>
-        <div>
-          <div style="font-size:12px; font-weight:700; color:var(--gold-deep); margin-bottom:6px;">🏙 이바구플랫폼</div>
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px 12px;">
-            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="s_tab" value="buildings" style="width:auto;"> 🏢 건물 관리</label>
-            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="s_tab" value="tenants" style="width:auto;"> 🧑 입주자 관리</label>
-            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="s_tab" value="movein" style="width:auto;"> 🏠 입주계약서</label>
-            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="s_tab" value="lease" style="width:auto;"> 📜 임대차계약서</label>
-            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="s_tab" value="renewal" style="width:auto;"> 📝 입주계약연장신청서</label>
-            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="s_tab" value="subdelegation" style="width:auto;"> 🔑 제3자 재위탁 승인요청</label>
-          </div>
-        </div>
-        <div>
-          <div style="font-size:12px; font-weight:700; color:var(--gold-deep); margin-bottom:6px;">🛠 해메체</div>
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px 12px;">
-            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="s_tab" value="receipts" style="width:auto;"> 🧾 강사 영수증(교육청)</label>
-            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="s_tab" value="salaryReceipts" style="width:auto;"> 🧾 강사 영수증(월급)</label>
-            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="s_tab" value="instructors" style="width:auto;"> 👨‍🏫 강사 관리</label>
-            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="s_tab" value="budget" style="width:auto;"> 💰 예산 정리</label>
-          </div>
-        </div>
-        <div>
-          <div style="font-size:12px; font-weight:700; color:var(--gold-deep); margin-bottom:6px;">📁 프로젝트</div>
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px 12px;">
-            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="s_tab" value="unitcost" style="width:auto;"> 🗂 프로젝트 관리</label>
-          </div>
-        </div>
-      </div>
+      <label>👥 역할 관리 (역할마다 PIN과 볼 수 있는 탭을 따로 설정해요)</label>
+      <div id="roleListBody" style="display:flex; flex-direction:column; gap:8px; margin-bottom:10px;"></div>
+      <button type="button" class="btn secondary" onclick="openRoleEditModal()">+ 새 역할 추가</button>
+      <div class="hint" style="margin-top:6px;">각 역할의 PIN으로 로그인하면, 그 역할에서 체크한 탭만 보여요. "공문 작성"·"프로젝트 관리"는 모든 역할에서 새 항목 추가까지 가능해요.</div>
     </div>
     <div class="field">
       <label>회사 정보 (재직증명서 등에 자동으로 들어감)</label>
@@ -1262,11 +1211,6 @@
       <input id="s_newPin" placeholder="비워두면 그대로 유지">
       <div class="hint">이 PIN은 이 브라우저에만 저장돼요. 다른 PC의 관리자와 PIN을 맞추고 싶으면 그쪽에서도 같은 값으로 변경해주세요.</div>
     </div>
-    <div class="field">
-      <label>뷰어(직원) PIN 변경 (선택, 4자리 이상)</label>
-      <input id="s_newViewerPin" placeholder="비워두면 그대로 유지 (기본값: 1680)">
-      <div class="hint">직원들에게 이 값을 공유하시면, 로그인 화면에서 이 PIN으로 뷰어 모드로 들어올 수 있어요.</div>
-    </div>
     <div class="modal-actions">
       <button class="btn secondary" onclick="closeModal('settings')">취소</button>
       <button class="btn" onclick="saveSettings()">저장</button>
@@ -1274,9 +1218,91 @@
   </div>
 </div>
 
+<div class="overlay" id="overlay-unconfirmedEvents">
+  <div class="modal" style="max-width:600px;">
+    <h2 style="margin:0 0 6px;">⚠️ 미확인 초과근무/대체휴무</h2>
+    <div class="hint" id="ue_context" style="margin-bottom:14px;"></div>
+    <div id="ue_body" style="max-height:60vh; overflow-y:auto; display:flex; flex-direction:column; gap:14px;"></div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeModal('unconfirmedEvents')">닫기</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay-roleEdit">
+  <div class="modal" style="max-width:640px;">
+    <h2 id="re_modalTitle" style="margin:0 0 14px;">👥 역할 추가</h2>
+    <input type="hidden" id="re_editId">
+    <div class="field"><label>역할 이름</label><input id="re_name" placeholder="예: 회계 직원, 해메체 운영 직원"></div>
+    <div class="field"><label>PIN (4자리 이상)</label><input id="re_pin" placeholder="예: 2580"></div>
+    <div class="field">
+      <label>이 역할이 볼 수 있는 탭</label>
+      <div style="display:flex; flex-direction:column; gap:16px; padding:8px 0;">
+        <div>
+          <div style="font-size:12px; font-weight:700; color:var(--gold-deep); margin-bottom:6px;">📁 정량서류</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px 12px;">
+            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="re_tab" value="contract" style="width:auto;"> 📄 계약서</label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="re_tab" value="docs" style="width:auto;"> 🏢 회사 기본사항</label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="re_tab" value="cert" style="width:auto;"> 🏅 자격·수상</label>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:12px; font-weight:700; color:var(--gold-deep); margin-bottom:6px;">🖨 서류발급기</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px 12px;">
+            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="re_tab" value="employ" style="width:auto;"> 🪪 재직증명서</label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="re_tab" value="official" style="width:auto;"> 📋 공문 작성</label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="re_tab" value="career" style="width:auto;"> 📜 경력증명서</label>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:12px; font-weight:700; color:var(--gold-deep); margin-bottom:6px;">👥 인사관리</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px 12px;">
+            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="re_tab" value="leave" style="width:auto;"> 🏖 연차 관리</label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="re_tab" value="comp" style="width:auto;"> 🔄 대체휴무 관리</label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="re_tab" value="workGP" style="width:auto;"> 🗓 빈시간(공공플랜)</label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="re_tab" value="workHM" style="width:auto;"> 🗓 빈시간(해메체)</label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="re_tab" value="employees" style="width:auto;"> 👤 직원 관리</label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="re_tab" value="rules" style="width:auto;"> 📖 사내 규정</label>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:12px; font-weight:700; color:var(--gold-deep); margin-bottom:6px;">🏙 이바구플랫폼</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px 12px;">
+            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="re_tab" value="buildings" style="width:auto;"> 🏢 건물 관리</label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="re_tab" value="tenants" style="width:auto;"> 🧑 입주자 관리</label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="re_tab" value="movein" style="width:auto;"> 🏠 입주계약서</label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="re_tab" value="lease" style="width:auto;"> 📜 임대차계약서</label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="re_tab" value="renewal" style="width:auto;"> 📝 입주계약연장신청서</label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="re_tab" value="subdelegation" style="width:auto;"> 🔑 제3자 재위탁 승인요청</label>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:12px; font-weight:700; color:var(--gold-deep); margin-bottom:6px;">🛠 해메체</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px 12px;">
+            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="re_tab" value="receipts" style="width:auto;"> 🧾 강사 영수증(교육청)</label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="re_tab" value="salaryReceipts" style="width:auto;"> 🧾 강사 영수증(월급)</label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="re_tab" value="instructors" style="width:auto;"> 👨‍🏫 강사 관리</label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="re_tab" value="budget" style="width:auto;"> 💰 예산 정리</label>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:12px; font-weight:700; color:var(--gold-deep); margin-bottom:6px;">📁 프로젝트</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px 12px;">
+            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="re_tab" value="unitcost" style="width:auto;"> 🗂 프로젝트 관리</label>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeModal('roleEdit')">취소</button>
+      <button class="btn" id="re_saveBtn" onclick="saveRole()">저장</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const KEYS = { contract:'gongplan_contracts_v1', docs:'gongplan_docs_v1', cert:'gongplan_certs_v1', employ:'gongplan_employ_v1', employees:'gongplan_employees_v1', official:'gongplan_official_v1', buildings:'gongplan_buildings_v1', lease:'gongplan_lease_v1', renewal:'gongplan_renewal_v1', tenants:'gongplan_tenants_v1', subdelegation:'gongplan_subdelegation_v1', movein:'gongplan_movein_v1', instructors:'gongplan_instructors_v1', receipts:'gongplan_receipts_v1', empReceipts:'gongplan_empreceipts_v1', salaryReceipts:'gongplan_salaryreceipts_v1', career:'gongplan_career_v1', rules:'gongplan_rules_v1', budget:'gongplan_budget_v1', budgetAllocations:'gongplan_budgetalloc_v1', unitCostProjects:'gongplan_ucproj_v1', unitCostPurchases:'gongplan_ucpurch_v1', unitCostWorktime:'gongplan_ucwork_v1', notionConfirmations:'gongplan_notionconfirm_v1', hiddenChecklistTasks:'gongplan_hiddentasks_v1' };
-let data = { contract:[], docs:[], cert:[], employ:[], employees:[], official:[], buildings:[], lease:[], renewal:[], tenants:[], subdelegation:[], movein:[], instructors:[], receipts:[], empReceipts:[], salaryReceipts:[], career:[], rules:[], budget:[], budgetAllocations:[], unitCostProjects:[], unitCostPurchases:[], unitCostWorktime:[], notionConfirmations:[], hiddenChecklistTasks:[], settings:{ viewerMode:false, allowedTabs:['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career','rules','budget','unitcost'], company:{ name:'', ceo:'', address:'', bizNumber:'', issuerName:'', issuerPosition:'', hasSeal:false, hasLogo:false, hasLogo2:false } } };
+let data = { contract:[], docs:[], cert:[], employ:[], employees:[], official:[], buildings:[], lease:[], renewal:[], tenants:[], subdelegation:[], movein:[], instructors:[], receipts:[], empReceipts:[], salaryReceipts:[], career:[], rules:[], budget:[], budgetAllocations:[], unitCostProjects:[], unitCostPurchases:[], unitCostWorktime:[], notionConfirmations:[], hiddenChecklistTasks:[], settings:{ viewerMode:false, roles:[], allowedTabs:['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career','rules','budget','unitcost'], company:{ name:'', ceo:'', address:'', bizNumber:'', issuerName:'', issuerPosition:'', hasSeal:false, hasLogo:false, hasLogo2:false } } };
 let currentTab = 'contract';
 let currentCategory = 'docs_cat';
 const TAB_CATEGORY_MAP = {
@@ -1766,6 +1792,71 @@ async function toggleEventConfirmed(empId, eventId, checked){
   else delete emp.confirmedEvents[eventId];
   cacheLocal('employees');
   await saveItemToFirestore('employees', emp);
+  if(document.getElementById('overlay-unconfirmedEvents').classList.contains('open')){
+    renderUnconfirmedEventsPopup();
+  }
+}
+
+function collectUnconfirmedEvents(year){
+  const groups = [];
+  data.employees.forEach(emp => {
+    const all = [];
+
+    const compLedger = buildCompLedgerForYear(emp, year);
+    for(let m=0; m<12; m++){
+      [...compLedger.accrualDetails[m], ...compLedger.usageDetails[m]].forEach(d => {
+        if(!(emp.confirmedEvents && emp.confirmedEvents[d.eventId])) all.push(d);
+      });
+    }
+
+    const annualLedger = buildAnnualLedgerForYear(emp, year);
+    if(annualLedger && annualLedger.usageDetails){
+      for(let m=0; m<12; m++){
+        (annualLedger.usageDetails[m]||[]).forEach(d => {
+          if(!(emp.confirmedEvents && emp.confirmedEvents[d.eventId])) all.push(d);
+        });
+      }
+    }
+
+    if(all.length > 0) groups.push({ emp, items: all });
+  });
+  return groups;
+}
+
+function renderUnconfirmedEventsPopup(){
+  const year = new Date().getFullYear();
+  const groups = collectUnconfirmedEvents(year);
+  const total = groups.reduce((s,g)=>s+g.items.length, 0);
+  document.getElementById('ue_context').textContent = `${year}년 기준 · 총 ${total}건`;
+  const body = document.getElementById('ue_body');
+  if(groups.length === 0){
+    body.innerHTML = `<div style="text-align:center; color:var(--mist); padding:20px;">확인 안 된 항목이 없어요. 👍</div>`;
+    return;
+  }
+  body.innerHTML = groups.map(g => `
+    <div>
+      <div style="font-weight:700; font-size:14px; color:var(--navy); margin-bottom:6px;">${escapeHtml(g.emp.name)} <span style="font-weight:400; font-size:12px; color:var(--mist);">(${g.items.length}건)</span></div>
+      <div style="display:flex; flex-direction:column; gap:4px;">
+        ${g.items.map(d => `
+          <label style="display:flex; align-items:center; gap:8px; font-size:13px; padding:6px 10px; background:var(--paper-2); border-radius:4px; cursor:pointer;">
+            <input type="checkbox" onchange="toggleEventConfirmed('${g.emp.id}', '${d.eventId}', this.checked)" style="width:auto;">
+            ${escapeHtml(d.text)}
+          </label>
+        `).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+function openUnconfirmedEventsPopup(){
+  renderUnconfirmedEventsPopup();
+  document.getElementById('overlay-unconfirmedEvents').classList.add('open');
+}
+
+async function checkUnconfirmedEventsOnLogin(){
+  if(!leaveLoaded) await fetchLeaveEvents();
+  const groups = collectUnconfirmedEvents(new Date().getFullYear());
+  if(groups.length > 0) openUnconfirmedEventsPopup();
 }
 
 async function updateCompAccrualOverride(empId, year, month, value){
@@ -1790,7 +1881,7 @@ function renderEmployeeFilterCheckboxes(){
   const el = document.getElementById('leaveEmployeeFilter');
   if(currentTab !== 'leave' && currentTab !== 'comp'){ el.style.display = 'none'; return; }
 
-  if(sessionRole === 'viewer'){
+  if(isRestricted()){
     const verifiedEmp = data.employees.find(e => e.id === viewerVerifiedEmployeeId);
     if(verifiedEmp){
       el.innerHTML = `<div style="font-size:13px;">👤 <b>${escapeHtml(verifiedEmp.name)}</b>님 본인 확인됨 <button class="icon-btn" onclick="clearViewerVerification()" style="margin-left:8px;">다른 사람으로 보기</button></div>`;
@@ -1841,7 +1932,7 @@ function renderLeaveLedger(){
   const year = parseInt((document.getElementById('leaveYearSelect').value) || new Date().getFullYear(), 10);
 
   let employees;
-  if(sessionRole === 'viewer'){
+  if(isRestricted()){
     const verifiedEmp = data.employees.find(e => e.id === viewerVerifiedEmployeeId);
     employees = verifiedEmp ? [verifiedEmp] : [];
     if(!verifiedEmp){
@@ -2038,30 +2129,124 @@ function getPin(){ return localStorage.getItem(PIN_KEY) || '0000'; }
 function getViewerPin(){ return localStorage.getItem(VIEWER_PIN_KEY) || '1680'; }
 
 // ---- IndexedDB helper (파일 핸들 저장용) ----
+let currentRoleAllowedTabs = null; // 로그인한 역할이 볼 수 있는 탭 (관리자면 null=전체)
+
 function isRestricted(){
-  return sessionRole === 'viewer';
+  return sessionRole !== null && sessionRole !== 'admin';
 }
 
 function doLogin(){
   const pin = prompt('PIN을 입력하세요');
   if(pin === null) return;
-  if(pin === getViewerPin()){
-    sessionRole = 'viewer';
-  } else if(pin === getPin()){
+  if(pin === getPin()){
     sessionRole = 'admin';
-  } else {
-    alert('PIN이 올바르지 않습니다.');
+    currentRoleAllowedTabs = null;
+    updateLoginUI();
+    render();
+    checkUnconfirmedEventsOnLogin();
     return;
   }
-  updateLoginUI();
-  render();
+  const roles = data.settings.roles || [];
+  const matched = roles.find(r => r.pin === pin);
+  if(matched){
+    sessionRole = matched.id;
+    currentRoleAllowedTabs = matched.allowedTabs || [];
+    updateLoginUI();
+    render();
+    return;
+  }
+  // 하위호환: 예전 단일 뷰어 PIN도 계속 지원
+  if(pin === getViewerPin()){
+    sessionRole = 'viewer';
+    currentRoleAllowedTabs = data.settings.allowedTabs;
+    updateLoginUI();
+    render();
+    return;
+  }
+  alert('PIN이 올바르지 않습니다.');
 }
 
 function doLogout(){
   sessionRole = null;
+  currentRoleAllowedTabs = null;
   viewerVerifiedEmployeeId = null;
   updateLoginUI();
   render();
+}
+
+function getCurrentRoleName(){
+  if(sessionRole === 'viewer') return '뷰어';
+  const role = (data.settings.roles || []).find(r => r.id === sessionRole);
+  return role ? role.name : '뷰어';
+}
+
+function renderRoleListBody(){
+  const el = document.getElementById('roleListBody');
+  if(!el) return;
+  const roles = data.settings.roles || [];
+  if(roles.length === 0){
+    el.innerHTML = '<div style="font-size:12.5px; color:var(--mist);">아직 등록된 역할이 없어요.</div>';
+    return;
+  }
+  el.innerHTML = roles.map(r => `
+    <div style="display:flex; justify-content:space-between; align-items:center; border:1px solid var(--line); border-radius:4px; padding:10px 14px;">
+      <div style="font-size:13.5px;">${escapeHtml(r.name)} <span style="color:var(--mist); font-size:12px;">· 탭 ${((r.allowedTabs||[]).length)}개</span></div>
+      <div style="display:flex; gap:6px;">
+        <button type="button" class="icon-btn" onclick='openRoleEditModal(${JSON.stringify(r).replace(/'/g,"&#39;")})'>수정</button>
+        <button type="button" class="icon-btn del" onclick="deleteRole('${r.id}')">삭제</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function openRoleEditModal(role){
+  document.getElementById('re_modalTitle').textContent = role ? '👥 역할 수정' : '👥 역할 추가';
+  document.getElementById('re_editId').value = role ? role.id : '';
+  document.getElementById('re_name').value = role ? role.name : '';
+  document.getElementById('re_pin').value = role ? role.pin : '';
+  document.querySelectorAll('.re_tab').forEach(cb => {
+    cb.checked = role ? (role.allowedTabs||[]).includes(cb.value) : false;
+  });
+  document.getElementById('overlay-roleEdit').classList.add('open');
+}
+
+async function saveRole(){
+  const name = document.getElementById('re_name').value.trim();
+  const pin = document.getElementById('re_pin').value.trim();
+  if(!name){ alert('역할 이름을 입력해주세요.'); return; }
+  if(pin.length < 4){ alert('PIN은 4자리 이상으로 해주세요.'); return; }
+  const allowedTabs = Array.from(document.querySelectorAll('.re_tab:checked')).map(cb=>cb.value);
+  if(allowedTabs.length === 0){ alert('최소 1개 이상의 탭을 선택해주세요.'); return; }
+
+  const editId = document.getElementById('re_editId').value;
+  const roles = data.settings.roles || [];
+  // 같은 PIN을 쓰는 다른 역할이나 관리자 PIN과 겹치지 않는지 확인
+  if(pin === getPin() || roles.some(r => r.pin === pin && r.id !== editId)){
+    alert('이미 사용 중인 PIN이에요. 다른 값으로 해주세요.');
+    return;
+  }
+
+  if(editId){
+    const idx = roles.findIndex(r => r.id === editId);
+    if(idx > -1) roles[idx] = { id: editId, name, pin, allowedTabs };
+  } else {
+    roles.push({ id: 'role-'+Date.now(), name, pin, allowedTabs });
+  }
+  data.settings.roles = roles;
+  await db.collection('settings').doc('main').set(data.settings).catch(err=>{
+    console.error(err); alert('역할 저장 실패: ' + err.message);
+  });
+  closeModal('roleEdit');
+  renderRoleListBody();
+}
+
+async function deleteRole(roleId){
+  if(!confirm('이 역할을 삭제할까요? 이 PIN으로 로그인이 안 되게 돼요.')) return;
+  data.settings.roles = (data.settings.roles || []).filter(r => r.id !== roleId);
+  await db.collection('settings').doc('main').set(data.settings).catch(err=>{
+    console.error(err); alert('삭제 실패: ' + err.message);
+  });
+  renderRoleListBody();
 }
 
 function updateLoginUI(){
@@ -2073,12 +2258,11 @@ function updateLoginUI(){
   document.getElementById('loginBtn').style.display = loggedIn ? 'none' : 'inline-block';
   document.getElementById('logoutBtn').style.display = loggedIn ? 'inline-block' : 'none';
   document.getElementById('settingsBtn').style.display = (sessionRole === 'admin') ? 'inline-block' : 'none';
+  document.getElementById('unconfirmedBtn').style.display = (sessionRole === 'admin') ? 'inline-block' : 'none';
 }
 
 function openSettings(){
-  document.querySelectorAll('.s_tab').forEach(cb => {
-    cb.checked = data.settings.allowedTabs.includes(cb.value);
-  });
+  renderRoleListBody();
   const company = data.settings.company || { name:'', ceo:'', address:'', bizNumber:'', issuerName:'', issuerPosition:'' };
   document.getElementById('s_companyName').value = company.name || '';
   document.getElementById('s_companyCeo').value = company.ceo || '';
@@ -2100,7 +2284,6 @@ function openSettings(){
   document.getElementById('s_logo2File').value = '';
   document.getElementById('s_logo2_current').innerHTML = company.hasLogo2 ? `등록된 로고 있음 <button type="button" onclick="removeLogo2()" class="icon-btn del" style="margin-left:6px;">🗑 삭제</button>` : '등록된 로고 없음';
   document.getElementById('s_newPin').value = '';
-  document.getElementById('s_newViewerPin').value = '';
   document.getElementById('overlay-settings').classList.add('open');
 }
 
@@ -2129,8 +2312,6 @@ async function removeLogo2(){
 }
 
 async function saveSettings(){
-  data.settings.allowedTabs = Array.from(document.querySelectorAll('.s_tab:checked')).map(cb=>cb.value);
-  if(data.settings.allowedTabs.length === 0) data.settings.allowedTabs = ['contract'];
   const sealFile = await readFileAsData(document.getElementById('s_sealFile'));
   const logoFile = await readFileAsData(document.getElementById('s_logoFile'));
   const logo2File = await readFileAsData(document.getElementById('s_logo2File'));
@@ -2169,11 +2350,6 @@ async function saveSettings(){
     if(newPin.length < 4){ alert('PIN은 4자리 이상으로 해주세요.'); return; }
     localStorage.setItem(PIN_KEY, newPin);
   }
-  const newViewerPin = document.getElementById('s_newViewerPin').value.trim();
-  if(newViewerPin){
-    if(newViewerPin.length < 4){ alert('뷰어 PIN은 4자리 이상으로 해주세요.'); return; }
-    localStorage.setItem(VIEWER_PIN_KEY, newViewerPin);
-  }
   db.collection('settings').doc('main').set(data.settings).catch(err=>{
     console.error(err); alert('설정 저장 실패: ' + err.message);
   });
@@ -2185,7 +2361,7 @@ async function saveSettings(){
 function applyRestrictions(){
   const loggedIn = sessionRole !== null;
   const restricted = isRestricted();
-  const allowed = restricted ? data.settings.allowedTabs : ['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career','rules','budget','unitcost'];
+  const allowed = restricted ? (currentRoleAllowedTabs || []) : ['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career','rules','budget','unitcost'];
 
   // 세부탭: 권한 + 현재 카테고리 둘 다 만족해야 보임
   document.querySelectorAll('#tabsBar .tab-btn').forEach(btn=>{
@@ -2228,7 +2404,7 @@ function applyRestrictions(){
   document.getElementById('budgetExportBtn').style.display = (loggedIn && !restricted && currentTab==='budget') ? 'inline-block' : 'none';
   document.getElementById('budgetDedupeBtn').style.display = (loggedIn && !restricted && currentTab==='budget') ? 'inline-block' : 'none';
   document.getElementById('budgetAllocBtn').style.display = (loggedIn && !restricted && currentTab==='budget') ? 'inline-block' : 'none';
-  document.getElementById('restrictionBadge').textContent = restricted ? '👁 뷰어로 로그인됨 (다운로드만 가능)' : (sessionRole === 'admin' ? '🔓 관리자로 로그인됨' : '');
+  document.getElementById('restrictionBadge').textContent = restricted ? `👁 ${getCurrentRoleName()}(으)로 로그인됨` : (sessionRole === 'admin' ? '🔓 관리자로 로그인됨' : '');
 }
 
 // ---- Firebase Firestore 실시간 동기화 (항목별 문서 구조) ----
@@ -2708,6 +2884,7 @@ function migrateData(d){
   }
   if(!Array.isArray(d.settings.allowedTabs)) d.settings.allowedTabs = ['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career','rules','budget','unitcost'];
   d.settings.allowedTabs = d.settings.allowedTabs.map(t => t==='education' ? 'docs' : t);
+  if(!Array.isArray(d.settings.roles)) d.settings.roles = [];
   if(!d.settings.company) d.settings.company = { name:'', ceo:'', address:'', bizNumber:'', issuerName:'', issuerPosition:'', hasSeal:false, hasLogo:false, hasLogo2:false };
   return d;
 }
@@ -2876,13 +3053,13 @@ function openModal(doc){
     document.getElementById('modalTitle-employ').textContent = doc ? '재직증명서 재발급' : '재직증명서 발급';
     document.getElementById('em_editId').value = doc ? doc.id : '';
     const sel = document.getElementById('em_employeeId');
-    const eligible = sessionRole === 'viewer' ? data.employees.filter(e=>e.allowIssue) : data.employees;
+    const eligible = isRestricted() ? data.employees.filter(e=>e.allowIssue) : data.employees;
     sel.innerHTML = eligible.map(e => `<option value="${e.id}">${escapeHtml(e.name)}</option>`).join('');
     document.getElementById('em_no_employee_hint').style.display = eligible.length===0 ? 'block' : 'none';
     if(doc && doc.employeeId){ sel.value = doc.employeeId; }
     document.getElementById('em_purpose').value = doc ? doc.purpose : '재직증명';
     document.getElementById('em_issueDate').value = doc ? doc.issueDate : today;
-    document.getElementById('em_verify_field').style.display = sessionRole === 'viewer' ? 'block' : 'none';
+    document.getElementById('em_verify_field').style.display = isRestricted() ? 'block' : 'none';
     document.getElementById('em_verify_birth').value = '';
     previewEmployeeInfo();
   } else if(tab==='career'){
@@ -3462,7 +3639,7 @@ async function saveEmploy(){
   const employeeId = document.getElementById('em_employeeId').value;
   const emp = data.employees.find(e => e.id === employeeId);
   if(!emp){ alert('직원을 선택해주세요. 등록된 직원이 없으면 먼저 "직원 정보 관리"에서 등록해주세요.'); return; }
-  if(sessionRole === 'viewer'){
+  if(isRestricted()){
     if(!emp.allowIssue){ alert('이 직원은 발급이 허용되지 않았습니다.'); return; }
     const inputBirth = document.getElementById('em_verify_birth').value.trim();
     const actualBirth = (emp.rrn||'').replace(/-/g,'').slice(0,6);
@@ -6688,7 +6865,7 @@ function formatKoreanDate(dateStr){
 }
 
 function requestPrint(item){
-  if(sessionRole === 'viewer'){
+  if(isRestricted()){
     const input = prompt('본인확인 - 생년월일 앞 6자리를 입력하세요');
     if(input === null) return;
     const actual = (item.rrn||'').replace(/-/g,'').slice(0,6);
