@@ -224,6 +224,8 @@
     <button class="tab-btn" data-tab="lease" data-cat="ibagu_cat" onclick="setTab('lease')">📜 임대차계약서</button>
     <button class="tab-btn" data-tab="renewal" data-cat="ibagu_cat" onclick="setTab('renewal')">📝 입주계약연장신청서</button>
     <button class="tab-btn" data-tab="subdelegation" data-cat="ibagu_cat" onclick="setTab('subdelegation')">🔑 제3자 재위탁 승인요청</button>
+    <button class="tab-btn" data-tab="reviewNotices" data-cat="ibagu_cat" onclick="setTab('reviewNotices')">📋 심사결과 알림</button>
+    <button class="tab-btn" data-tab="meetingMinutes" data-cat="ibagu_cat" onclick="setTab('meetingMinutes')">📝 정기 회의록</button>
     <button class="tab-btn" data-tab="receipts" data-cat="hame_cat" onclick="setTab('receipts')">🧾 강사 영수증(교육청)</button>
     <button class="tab-btn" data-tab="salaryReceipts" data-cat="hame_cat" onclick="setTab('salaryReceipts')">🧾 강사 영수증(월급)</button>
     <button class="tab-btn" data-tab="instructors" data-cat="hame_cat" onclick="setTab('instructors')">👨‍🏫 강사 관리</button>
@@ -493,10 +495,14 @@
       <label>본문 (한 줄에 하나씩, 1. 2. 3.으로 자동 번호매김)</label>
       <textarea id="of_body" style="min-height:80px;" placeholder="귀 청(과)의 무궁한 발전을 기원합니다.&#10;23년 메이커스페이스 주관기관 협약 체결 요청드립니다."></textarea>
     </div>
-
     <div class="field">
       <label>아래 항목 (한 줄에 하나씩, 가. 나. 다.로 자동 번호매김)</label>
       <textarea id="of_subItems" style="min-height:80px;" placeholder="내용 : 23년 메이커 스페이스 주관기관 협약 체결 요청의 건&#10;협약기간 : 2023.01.01.(일) ~ 2023.12.31.(일)"></textarea>
+    </div>
+
+    <div class="field">
+      <label>붙임 (선택, 한 줄에 하나씩, 1. 2. 3.으로 자동 번호매김)</label>
+      <textarea id="of_attachments" style="min-height:60px;" placeholder="협약서 1부.&#10;사업계획서 1부."></textarea>
     </div>
 
     <div class="field"><label>문서번호 (선택, 시행 줄에만 표시됨)</label><input id="of_docNo" placeholder="자동 생성됨 (직접 수정 가능)"></div>
@@ -505,6 +511,103 @@
     <div class="modal-actions">
       <button class="btn secondary" onclick="closeModal('official')">취소</button>
       <button class="btn" id="of_saveBtn" onclick="saveOfficial()">저장하고 발급</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 이바구플랫폼: 심사결과 알림 모달 ===== -->
+<div class="overlay" id="overlay-reviewNotices">
+  <div class="modal" style="max-width:680px;">
+    <h2 id="modalTitle-reviewNotices">심사결과 알림 작성</h2>
+    <div class="hint" style="margin-bottom:14px;">아래 예시 문장이 미리 채워져 있어요. 지우고 직접 내용을 입력해주세요.</div>
+    <input type="hidden" id="rvn_editId">
+
+    <div class="field"><label>수신</label><input id="rvn_recipient" placeholder="예: 부산광역시 동구청"></div>
+    <div class="field"><label>경유 (선택, 비워두면 빈 줄로 표시)</label><input id="rvn_via" placeholder="예: OO과"></div>
+    <div class="field"><label>제목</label><input id="rvn_title" placeholder="예: 2026년 동구 도심형 청년 창업주거 복합공간 조성사업 참여청년 심사 결과 알림"></div>
+
+    <div class="field">
+      <label>본문 2번 항목 (1번 "귀 기관의 무궁한 발전을 기원합니다."는 자동 고정)</label>
+      <textarea id="rvn_intro" style="min-height:60px;" placeholder="2026년 「동구 도심형 청년 창업·주거 복합공간」 '이바구플랫폼' 조성사업 참여청년 심사결과를 아래와 같이 알려드립니다."></textarea>
+    </div>
+    <div class="field"><label>가. 일시</label><input id="rvn_date" placeholder="예: 2026. 08. 21.(금) 13:00 ~ 13:30"></div>
+    <div class="field"><label>나. 장소</label><input id="rvn_location" placeholder="예: 이바구벤처캠프 2층 (부산 동구 영초길 191번길 10-2, 2층)"></div>
+    <div class="field"><label>다. 내용</label><input id="rvn_content" placeholder="예: 동구 도심형 청년 창업주거 복합공간 '이바구플랫폼' 조성사업 참여청년 2차 대면심사 결과 공유"></div>
+
+    <div class="field">
+      <label>라. 심사위원 목록 (표 열 제목과 자동으로 같이 쓰여요)</label>
+      <div id="rvn_judgesBody" style="display:flex; flex-direction:column; gap:8px; margin-bottom:8px;"></div>
+      <button type="button" class="btn secondary" onclick="addJudgeRow()">+ 심사위원 추가</button>
+      <div class="hint">"일자리경제과"처럼 참석하지 않는 기관도 위원으로 추가하고 참석 체크를 꺼두면, 표에는 "불참"으로 나오고 점수 계산에서는 제외돼요.</div>
+    </div>
+
+    <div class="field">
+      <label>심사결과 표</label>
+      <div id="rvn_candidatesBody" style="display:flex; flex-direction:column; gap:10px; margin-bottom:8px;"></div>
+      <button type="button" class="btn secondary" onclick="addCandidateRow()">+ 지원자 추가</button>
+    </div>
+
+    <div class="field"><label>문서번호 (선택, 시행 줄에만 표시됨)</label><input id="rvn_docNo" placeholder="자동 생성됨 (직접 수정 가능)"></div>
+    <div class="field"><label>시행일자</label><input type="date" id="rvn_effectiveDate" min="1900-01-01" max="2099-12-31"></div>
+    <div class="field"><label>담당자 (선택, 비워두면 발급담당자로 채워짐)</label><input id="rvn_contact" placeholder="예: 박경도"></div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeModal('reviewNotices')">취소</button>
+      <button class="btn" id="rvn_saveBtn" onclick="saveReviewNotice()">저장하고 발급</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 이바구플랫폼: 정기 회의록 모달 ===== -->
+<div class="overlay" id="overlay-meetingMinutes">
+  <div class="modal" style="max-width:680px;">
+    <h2 id="modalTitle-meetingMinutes">정기 회의록 작성</h2>
+    <input type="hidden" id="mm_editId">
+
+    <div class="field"><label>회의명</label><input id="mm_title" placeholder="예: 이바구플랫폼 정기 회의록 [8월]"></div>
+    <div class="field"><label>작성자 소속</label><input id="mm_writerOrg" placeholder="예: 이바구플랫폼(공공플랜)"></div>
+    <div class="field"><label>작성자명</label><input id="mm_writerName" placeholder="예: 심효희"></div>
+    <div class="field"><label>회의 일시</label><input type="date" id="mm_meetingDate" min="1900-01-01" max="2099-12-31"></div>
+    <div class="field"><label>회의 시간</label><input id="mm_meetingTime" placeholder="예: 10:00-11:00"></div>
+    <div class="field"><label>장소</label><input id="mm_location" placeholder="예: 이바구벤처캠프 2층"></div>
+    <div class="field">
+      <label>안건 (한 줄에 하나씩, 1. 2. 3.으로 자동 번호매김)</label>
+      <textarea id="mm_agenda" style="min-height:80px;" placeholder="신규 입주기업 소개 및 플랫폼 운영 안내&#10;플랫폼 예산 운영 및 집행방식 논의"></textarea>
+    </div>
+    <div class="field">
+      <label>회의 내용 (요약) — 안건 번호 줄과, 발언자 줄("이름 : 내용")을 구분해서 적어주세요</label>
+      <textarea id="mm_contentSummary" style="min-height:140px;" placeholder="1. 신규 입주기업 소개 및 플랫폼 운영 안내&#10;이유한 : 신규 입주기업 '봉황공 프로젝트' 등 4개사를 소개하고, 입주기업의 행사 및 활동 내용을 공유하며 플랫폼 홍보와 대외 연계에 활용하고자 한다고 설명함.&#10;우유정 : 플랫폼을 활용한 행사 및 자체 행사 등에 대한 지속적인 공유와 협조가 필요하다는 의견을 나눔."></textarea>
+    </div>
+    <div class="field">
+      <label>회의 결과 (한 줄에 하나씩, 1. 2. 3.으로 자동 번호매김)</label>
+      <textarea id="mm_resultSummary" style="min-height:80px;" placeholder="신규 입주기업 소개 및 플랫폼 운영 안내&#10;플랫폼 예산 운영 및 집행방식 관련 논의"></textarea>
+    </div>
+
+    <div class="field">
+      <label>회의 사진 1 (선택)</label>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <input type="file" id="mm_photo1File" accept="image/*" style="flex:1;">
+        <button type="button" class="icon-btn del" onclick="clearFileInput('mm_photo1File')">✕ 선택취소</button>
+      </div>
+      <div class="filerow" id="mm_photo1_current"></div>
+    </div>
+    <div class="field">
+      <label>회의 사진 2 (선택)</label>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <input type="file" id="mm_photo2File" accept="image/*" style="flex:1;">
+        <button type="button" class="icon-btn del" onclick="clearFileInput('mm_photo2File')">✕ 선택취소</button>
+      </div>
+      <div class="filerow" id="mm_photo2_current"></div>
+    </div>
+
+    <div class="field">
+      <label>참석자 (체크하면 소속·성명·서명이 확인서에 자동으로 들어가요)</label>
+      <div id="mm_attendeesBody" style="display:flex; flex-direction:column; gap:4px; max-height:260px; overflow-y:auto; border:1px solid var(--line); border-radius:4px; padding:10px;"></div>
+    </div>
+
+    <div class="field"><label>담당자 (선택, 비워두면 발급담당자로 채워짐)</label><input id="mm_contact" placeholder="예: 박경도"></div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeModal('meetingMinutes')">취소</button>
+      <button class="btn" id="mm_saveBtn" onclick="saveMeetingMinutes()">저장</button>
     </div>
   </div>
 </div>
@@ -539,6 +642,14 @@
     <div class="field"><label>연락처</label><input id="tn_contact" placeholder="예: 000-0000-0000"></div>
     <div class="field"><label>용도 (사용목적, 공문/연장신청서에 자동 반영)</label><input id="tn_purpose" placeholder="예: 카페 운영"></div>
     <div class="field"><label>메모 (선택)</label><textarea id="tn_notes" placeholder="특이사항 등"></textarea></div>
+    <div class="field">
+      <label>대표자 서명(도장) 파일 (선택, 회의록 확인서 등에 쓰여요)</label>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <input type="file" id="tn_sealFile" accept="image/*" style="flex:1;">
+        <button type="button" class="icon-btn del" onclick="clearFileInput('tn_sealFile')">✕ 선택취소</button>
+      </div>
+      <div class="filerow" id="tn_seal_current"></div>
+    </div>
     <div class="modal-actions">
       <button class="btn secondary" onclick="closeModal('tenants')">취소</button>
       <button class="btn" id="tn_saveBtn" onclick="saveTenant()">저장</button>
@@ -1129,6 +1240,14 @@
       </div>
       <div class="field"><label>표시 색상 (선택, 체크리스트 담당자 뱃지 등에 쓰여요)</label><input type="color" id="emp_color" style="width:60px; height:36px; padding:2px; cursor:pointer;"></div>
       <div class="field">
+        <label>서명(도장) 파일 (선택, 회의록 확인서 등에 쓰여요)</label>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <input type="file" id="emp_sealFile" accept="image/*" style="flex:1;">
+          <button type="button" class="icon-btn del" onclick="clearFileInput('emp_sealFile')">✕ 선택취소</button>
+        </div>
+        <div class="filerow" id="emp_seal_current"></div>
+      </div>
+      <div class="field">
         <label style="display:flex; align-items:center; gap:8px; font-size:14px; color:var(--ink);">
           <input type="checkbox" id="emp_allowIssue" style="width:auto;"> 뷰어 발급 허용 (체크한 직원만 재직증명서 발급 목록에 뜸)
         </label>
@@ -1274,6 +1393,8 @@
             <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="re_tab" value="lease" style="width:auto;"> 📜 임대차계약서</label>
             <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="re_tab" value="renewal" style="width:auto;"> 📝 입주계약연장신청서</label>
             <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="re_tab" value="subdelegation" style="width:auto;"> 🔑 제3자 재위탁 승인요청</label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="re_tab" value="reviewNotices" style="width:auto;"> 📋 심사결과 알림</label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="re_tab" value="meetingMinutes" style="width:auto;"> 📝 정기 회의록</label>
           </div>
         </div>
         <div>
@@ -1301,15 +1422,15 @@
 </div>
 
 <script>
-const KEYS = { contract:'gongplan_contracts_v1', docs:'gongplan_docs_v1', cert:'gongplan_certs_v1', employ:'gongplan_employ_v1', employees:'gongplan_employees_v1', official:'gongplan_official_v1', buildings:'gongplan_buildings_v1', lease:'gongplan_lease_v1', renewal:'gongplan_renewal_v1', tenants:'gongplan_tenants_v1', subdelegation:'gongplan_subdelegation_v1', movein:'gongplan_movein_v1', instructors:'gongplan_instructors_v1', receipts:'gongplan_receipts_v1', empReceipts:'gongplan_empreceipts_v1', salaryReceipts:'gongplan_salaryreceipts_v1', career:'gongplan_career_v1', rules:'gongplan_rules_v1', budget:'gongplan_budget_v1', budgetAllocations:'gongplan_budgetalloc_v1', unitCostProjects:'gongplan_ucproj_v1', unitCostPurchases:'gongplan_ucpurch_v1', unitCostWorktime:'gongplan_ucwork_v1', notionConfirmations:'gongplan_notionconfirm_v1', hiddenChecklistTasks:'gongplan_hiddentasks_v1' };
-let data = { contract:[], docs:[], cert:[], employ:[], employees:[], official:[], buildings:[], lease:[], renewal:[], tenants:[], subdelegation:[], movein:[], instructors:[], receipts:[], empReceipts:[], salaryReceipts:[], career:[], rules:[], budget:[], budgetAllocations:[], unitCostProjects:[], unitCostPurchases:[], unitCostWorktime:[], notionConfirmations:[], hiddenChecklistTasks:[], settings:{ viewerMode:false, roles:[], allowedTabs:['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career','rules','budget','unitcost'], company:{ name:'', ceo:'', address:'', bizNumber:'', issuerName:'', issuerPosition:'', hasSeal:false, hasLogo:false, hasLogo2:false } } };
+const KEYS = { contract:'gongplan_contracts_v1', docs:'gongplan_docs_v1', cert:'gongplan_certs_v1', employ:'gongplan_employ_v1', employees:'gongplan_employees_v1', official:'gongplan_official_v1', buildings:'gongplan_buildings_v1', lease:'gongplan_lease_v1', renewal:'gongplan_renewal_v1', tenants:'gongplan_tenants_v1', subdelegation:'gongplan_subdelegation_v1', movein:'gongplan_movein_v1', instructors:'gongplan_instructors_v1', receipts:'gongplan_receipts_v1', empReceipts:'gongplan_empreceipts_v1', salaryReceipts:'gongplan_salaryreceipts_v1', career:'gongplan_career_v1', rules:'gongplan_rules_v1', budget:'gongplan_budget_v1', budgetAllocations:'gongplan_budgetalloc_v1', unitCostProjects:'gongplan_ucproj_v1', unitCostPurchases:'gongplan_ucpurch_v1', unitCostWorktime:'gongplan_ucwork_v1', notionConfirmations:'gongplan_notionconfirm_v1', hiddenChecklistTasks:'gongplan_hiddentasks_v1', reviewNotices:'gongplan_reviewnotices_v1', meetingMinutes:'gongplan_meetingminutes_v1' };
+let data = { contract:[], docs:[], cert:[], employ:[], employees:[], official:[], buildings:[], lease:[], renewal:[], tenants:[], subdelegation:[], movein:[], instructors:[], receipts:[], empReceipts:[], salaryReceipts:[], career:[], rules:[], budget:[], budgetAllocations:[], unitCostProjects:[], unitCostPurchases:[], unitCostWorktime:[], notionConfirmations:[], hiddenChecklistTasks:[], reviewNotices:[], meetingMinutes:[], settings:{ viewerMode:false, roles:[], allowedTabs:['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career','rules','budget','unitcost','reviewNotices','meetingMinutes'], company:{ name:'', ceo:'', address:'', bizNumber:'', issuerName:'', issuerPosition:'', hasSeal:false, hasLogo:false, hasLogo2:false } } };
 let currentTab = 'contract';
 let currentCategory = 'docs_cat';
 const TAB_CATEGORY_MAP = {
   contract:'docs_cat', docs:'docs_cat', cert:'docs_cat',
   employ:'issue_cat', official:'issue_cat', career:'issue_cat',
   leave:'hr_cat', comp:'hr_cat', workGP:'hr_cat', workHM:'hr_cat', employees:'hr_cat', rules:'hr_cat',
-  movein:'ibagu_cat', lease:'ibagu_cat', renewal:'ibagu_cat', buildings:'ibagu_cat', tenants:'ibagu_cat', subdelegation:'ibagu_cat',
+  movein:'ibagu_cat', lease:'ibagu_cat', renewal:'ibagu_cat', buildings:'ibagu_cat', tenants:'ibagu_cat', subdelegation:'ibagu_cat', reviewNotices:'ibagu_cat', meetingMinutes:'ibagu_cat',
   receipts:'hame_cat', salaryReceipts:'hame_cat', instructors:'hame_cat', budget:'hame_cat', unitcost:'project_cat'
 };
 
@@ -2361,7 +2482,7 @@ async function saveSettings(){
 function applyRestrictions(){
   const loggedIn = sessionRole !== null;
   const restricted = isRestricted();
-  const allowed = restricted ? (currentRoleAllowedTabs || []) : ['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career','rules','budget','unitcost'];
+  const allowed = restricted ? (currentRoleAllowedTabs || []) : ['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career','rules','budget','unitcost','reviewNotices','meetingMinutes'];
 
   // 세부탭: 권한 + 현재 카테고리 둘 다 만족해야 보임
   document.querySelectorAll('#tabsBar .tab-btn').forEach(btn=>{
@@ -2432,7 +2553,7 @@ function ensureFirebaseAuth(){
     });
   });
 }
-const COLLECTIONS = { contract:'contracts', docs:'docs', cert:'certs', employ:'employment_certificates', employees:'employees', official:'official_docs', buildings:'buildings', lease:'lease_contracts', renewal:'renewal_requests', tenants:'tenants', subdelegation:'subdelegation_requests', movein:'movein_contracts', instructors:'instructors', receipts:'instructor_receipts', empReceipts:'employee_receipts', salaryReceipts:'instructor_salary_receipts', career:'career_certificates', rules:'company_rules', budget:'hamec_budget', budgetAllocations:'hamec_budget_allocations', unitCostProjects:'hamec_unitcost_projects', unitCostPurchases:'hamec_unitcost_purchases', unitCostWorktime:'hamec_unitcost_worktime', notionConfirmations:'gongplan_notion_confirmations', hiddenChecklistTasks:'gongplan_hidden_tasks' };
+const COLLECTIONS = { contract:'contracts', docs:'docs', cert:'certs', employ:'employment_certificates', employees:'employees', official:'official_docs', buildings:'buildings', lease:'lease_contracts', renewal:'renewal_requests', tenants:'tenants', subdelegation:'subdelegation_requests', movein:'movein_contracts', instructors:'instructors', receipts:'instructor_receipts', empReceipts:'employee_receipts', salaryReceipts:'instructor_salary_receipts', career:'career_certificates', rules:'company_rules', budget:'hamec_budget', budgetAllocations:'hamec_budget_allocations', unitCostProjects:'hamec_unitcost_projects', unitCostPurchases:'hamec_unitcost_purchases', unitCostWorktime:'hamec_unitcost_worktime', notionConfirmations:'gongplan_notion_confirmations', hiddenChecklistTasks:'gongplan_hidden_tasks', reviewNotices:'review_notices', meetingMinutes:'meeting_minutes' };
 
 function updateSyncStatus(msg){
   document.getElementById('syncStatus').textContent = msg || '';
@@ -2584,6 +2705,18 @@ async function initFirebaseSync(){
     render();
   }, err => { console.error(err); updateSyncStatus('🔴 체크리스트 숨김 동기화 실패: ' + err.message); });
 
+  db.collection('review_notices').onSnapshot(snap => {
+    data.reviewNotices = snap.docs.map(d => fixReviewNoticeItem(d.data()));
+    localStorage.setItem(KEYS.reviewNotices, JSON.stringify(data.reviewNotices));
+    render();
+  }, err => { console.error(err); updateSyncStatus('🔴 심사결과 알림 동기화 실패: ' + err.message); });
+
+  db.collection('meeting_minutes').onSnapshot(snap => {
+    data.meetingMinutes = snap.docs.map(d => fixMeetingMinutesItem(d.data()));
+    localStorage.setItem(KEYS.meetingMinutes, JSON.stringify(data.meetingMinutes));
+    render();
+  }, err => { console.error(err); updateSyncStatus('🔴 정기 회의록 동기화 실패: ' + err.message); });
+
   db.collection('employee_receipts').onSnapshot(snap => {
     data.empReceipts = snap.docs.map(d => fixEmpReceiptItem(d.data()));
     localStorage.setItem(KEYS.empReceipts, JSON.stringify(data.empReceipts));
@@ -2610,7 +2743,7 @@ async function initFirebaseSync(){
   db.collection('settings').doc('main').onSnapshot(snap => {
     if(snap.exists){
       data.settings = snap.data();
-      if(!Array.isArray(data.settings.allowedTabs)) data.settings.allowedTabs = ['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career','rules','budget','unitcost'];
+      if(!Array.isArray(data.settings.allowedTabs)) data.settings.allowedTabs = ['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career','rules','budget','unitcost','reviewNotices','meetingMinutes'];
       if(!data.settings.company) data.settings.company = { name:'', ceo:'', address:'', bizNumber:'', issuerName:'', issuerPosition:'', hasSeal:false, hasLogo:false, hasLogo2:false };
     }
     applyRestrictions();
@@ -2779,14 +2912,20 @@ function fixNotionConfirmationItem(item){
 function fixHiddenChecklistTaskItem(item){
   return { id:'', hidden:false, ...item };
 }
+function fixReviewNoticeItem(item){
+  return { docNo:'', effectiveDate:'', recipient:'', via:'', title:'', intro:'', reviewDate:'', reviewLocation:'', reviewContent:'', judges:[], candidates:[], attachments:'', contact:'', ...item };
+}
+function fixMeetingMinutesItem(item){
+  return { title:'', writerOrg:'', writerName:'', meetingDate:'', meetingTime:'', location:'', agenda:'', contentSummary:'', resultSummary:'', attendeeIds:[], hasPhoto1:false, hasPhoto2:false, contact:'', ...item };
+}
 function fixOfficialItem(item){
-  return { docNo:'', effectiveDate:'', recipient:'', via:'', title:'', body:'', subItems:'', contact:'', ...item };
+  return { docNo:'', effectiveDate:'', recipient:'', via:'', title:'', body:'', subItems:'', attachments:'', contact:'', ...item };
 }
 function fixBuildingItem(item){
   return { name:'', officialName:'', address:'', area:'', notes:'', ...item };
 }
 function fixTenantItem(item){
-  return { companyName:'', repName:'', repBirth:'', address:'', regNo:'', contact:'', purpose:'', notes:'', ...item };
+  return { companyName:'', repName:'', repBirth:'', address:'', regNo:'', contact:'', purpose:'', notes:'', hasSeal:false, ...item };
 }
 function fixLeaseItem(item){
   return {
@@ -2852,7 +2991,7 @@ function fixEmployeeItem(item){
 }
 
 function migrateData(d){
-  if(!d) return { contract:[], docs:[], cert:[], employ:[], employees:[], official:[], buildings:[], lease:[], renewal:[], tenants:[], subdelegation:[], movein:[], instructors:[], receipts:[], empReceipts:[], salaryReceipts:[], career:[], rules:[], budget:[], budgetAllocations:[], unitCostProjects:[], unitCostPurchases:[], unitCostWorktime:[], notionConfirmations:[], hiddenChecklistTasks:[] };
+  if(!d) return { contract:[], docs:[], cert:[], employ:[], employees:[], official:[], buildings:[], lease:[], renewal:[], tenants:[], subdelegation:[], movein:[], instructors:[], receipts:[], empReceipts:[], salaryReceipts:[], career:[], rules:[], budget:[], budgetAllocations:[], unitCostProjects:[], unitCostPurchases:[], unitCostWorktime:[], notionConfirmations:[], hiddenChecklistTasks:[], reviewNotices:[], meetingMinutes:[] };
   d.contract = (d.contract||[]).map(fixContractItem);
   d.docs = (d.docs || d.education || []).map(fixDocItem);
   delete d.education;
@@ -2879,10 +3018,12 @@ function migrateData(d){
   d.unitCostWorktime = (d.unitCostWorktime||[]).map(fixUnitCostWorktimeItem);
   d.notionConfirmations = (d.notionConfirmations||[]).map(fixNotionConfirmationItem);
   d.hiddenChecklistTasks = (d.hiddenChecklistTasks||[]).map(fixHiddenChecklistTaskItem);
+  d.reviewNotices = (d.reviewNotices||[]).map(fixReviewNoticeItem);
+  d.meetingMinutes = (d.meetingMinutes||[]).map(fixMeetingMinutesItem);
   if(!d.settings || typeof d.settings !== 'object'){
-    d.settings = { viewerMode:false, allowedTabs:['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career','rules','budget','unitcost'], company:{ name:'', ceo:'', address:'', bizNumber:'', issuerName:'', issuerPosition:'', hasSeal:false, hasLogo:false, hasLogo2:false } };
+    d.settings = { viewerMode:false, allowedTabs:['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career','rules','budget','unitcost','reviewNotices','meetingMinutes'], company:{ name:'', ceo:'', address:'', bizNumber:'', issuerName:'', issuerPosition:'', hasSeal:false, hasLogo:false, hasLogo2:false } };
   }
-  if(!Array.isArray(d.settings.allowedTabs)) d.settings.allowedTabs = ['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career','rules','budget','unitcost'];
+  if(!Array.isArray(d.settings.allowedTabs)) d.settings.allowedTabs = ['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career','rules','budget','unitcost','reviewNotices','meetingMinutes'];
   d.settings.allowedTabs = d.settings.allowedTabs.map(t => t==='education' ? 'docs' : t);
   if(!Array.isArray(d.settings.roles)) d.settings.roles = [];
   if(!d.settings.company) d.settings.company = { name:'', ceo:'', address:'', bizNumber:'', issuerName:'', issuerPosition:'', hasSeal:false, hasLogo:false, hasLogo2:false };
@@ -3081,9 +3222,47 @@ function openModal(doc){
     document.getElementById('of_title').value = doc ? doc.title : '23년 메이커 스페이스 주관기관 협약 체결 요청의 건';
     document.getElementById('of_body').value = doc ? doc.body : '귀 청(과)의 무궁한 발전을 기원합니다.\n23년 메이커스페이스 주관기관 협약 체결 요청드립니다.';
     document.getElementById('of_subItems').value = doc ? doc.subItems : '내용 : 23년 메이커 스페이스 주관기관 협약 체결 요청의 건\n협약기간 : 2026.01.01.(목) ~ 2026.12.31.(목)';
+    document.getElementById('of_attachments').value = doc ? doc.attachments : '';
     document.getElementById('of_docNo').value = doc ? doc.docNo : generateDocNo();
     document.getElementById('of_effectiveDate').value = doc ? doc.effectiveDate : today;
     document.getElementById('of_contact').value = doc ? doc.contact : '';
+  } else if(tab==='reviewNotices'){
+    const today = new Date().toISOString().slice(0,10);
+    document.getElementById('modalTitle-reviewNotices').textContent = doc ? '심사결과 알림 수정' : '심사결과 알림 작성';
+    document.getElementById('rvn_editId').value = doc ? doc.id : '';
+    document.getElementById('rvn_recipient').value = doc ? doc.recipient : '부산광역시 동구청';
+    document.getElementById('rvn_via').value = doc ? doc.via : '';
+    document.getElementById('rvn_title').value = doc ? doc.title : '2026년 동구 도심형 청년 창업주거 복합공간 조성사업 참여청년 심사 결과 알림';
+    document.getElementById('rvn_intro').value = doc ? doc.intro : '2026년 「동구 도심형 청년 창업·주거 복합공간」 \'이바구플랫폼\' 조성사업 참여청년 심사결과를 아래와 같이 알려드립니다.';
+    document.getElementById('rvn_date').value = doc ? doc.reviewDate : '2026. 08. 21.(금) 13:00 ~ 13:30';
+    document.getElementById('rvn_location').value = doc ? doc.reviewLocation : '이바구벤처캠프 2층 (부산 동구 영초길 191번길 10-2, 2층)';
+    document.getElementById('rvn_content').value = doc ? doc.reviewContent : '동구 도심형 청년 창업주거 복합공간 \'이바구플랫폼\' 조성사업 참여청년 2차 대면심사 결과 공유';
+    officialJudges = doc && doc.judges ? JSON.parse(JSON.stringify(doc.judges)) : [];
+    officialCandidates = doc && doc.candidates ? JSON.parse(JSON.stringify(doc.candidates)) : [];
+    renderJudgesRows();
+    renderCandidatesRows();
+    document.getElementById('rvn_docNo').value = doc ? doc.docNo : generateDocNo();
+    document.getElementById('rvn_effectiveDate').value = doc ? doc.effectiveDate : today;
+    document.getElementById('rvn_contact').value = doc ? doc.contact : '';
+  } else if(tab==='meetingMinutes'){
+    document.getElementById('modalTitle-meetingMinutes').textContent = doc ? '정기 회의록 수정' : '정기 회의록 작성';
+    document.getElementById('mm_editId').value = doc ? doc.id : '';
+    const nowMonth = new Date().getMonth()+1;
+    document.getElementById('mm_title').value = doc ? doc.title : `이바구플랫폼 정기 회의록 [${nowMonth}월]`;
+    document.getElementById('mm_writerOrg').value = doc ? doc.writerOrg : '이바구플랫폼(공공플랜)';
+    document.getElementById('mm_writerName').value = doc ? doc.writerName : '';
+    document.getElementById('mm_meetingDate').value = doc ? doc.meetingDate : new Date().toISOString().slice(0,10);
+    document.getElementById('mm_meetingTime').value = doc ? doc.meetingTime : '10:00-11:00';
+    document.getElementById('mm_location').value = doc ? doc.location : '이바구벤처캠프 2층';
+    document.getElementById('mm_agenda').value = doc ? doc.agenda : '';
+    document.getElementById('mm_contentSummary').value = doc ? doc.contentSummary : '';
+    document.getElementById('mm_resultSummary').value = doc ? doc.resultSummary : '';
+    document.getElementById('mm_photo1File').value = '';
+    document.getElementById('mm_photo2File').value = '';
+    document.getElementById('mm_photo1_current').innerHTML = (doc && doc.hasPhoto1) ? '등록된 사진 있음' : '등록된 사진 없음';
+    document.getElementById('mm_photo2_current').innerHTML = (doc && doc.hasPhoto2) ? '등록된 사진 있음' : '등록된 사진 없음';
+    renderAttendeesChecklist(doc ? doc.attendeeIds : []);
+    document.getElementById('mm_contact').value = doc ? doc.contact : '';
   } else if(tab==='buildings'){
     document.getElementById('modalTitle-buildings').textContent = doc ? '건물 수정' : '건물 추가';
     document.getElementById('bd_editId').value = doc ? doc.id : '';
@@ -3103,6 +3282,8 @@ function openModal(doc){
     document.getElementById('tn_contact').value = doc ? doc.contact : '';
     document.getElementById('tn_purpose').value = doc ? doc.purpose : '';
     document.getElementById('tn_notes').value = doc ? doc.notes : '';
+    document.getElementById('tn_sealFile').value = '';
+    document.getElementById('tn_seal_current').innerHTML = (doc && doc.hasSeal) ? `등록된 서명 있음 <button type="button" onclick="removeTenantSeal('${doc.id}')" class="icon-btn del" style="margin-left:6px;">🗑 삭제</button>` : '등록된 서명 없음';
   } else if(tab==='rules'){
     document.getElementById('modalTitle-rules').textContent = doc ? '사내 규정 수정' : '사내 규정 추가';
     document.getElementById('rl_editId').value = doc ? doc.id : '';
@@ -3760,6 +3941,181 @@ function generateDocNo(){
   return `${dateStr}-${String(todayCount+1).padStart(2,'0')}`;
 }
 
+// ===== 정기 회의록: 참석자(직원+입주자 통합) 관리 =====
+
+// 직원+입주자를 하나의 "참석 후보" 목록으로 합침. id는 원본 컬렉션의 id를 그대로 씀
+function getAttendeeCandidates(){
+  const fromEmployees = data.employees.map(e => ({ id: e.id, source:'employees', org: '공공플랜', name: e.name, hasSeal: !!e.hasSeal }));
+  const fromTenants = data.tenants.map(t => ({ id: t.id, source:'tenants', org: t.companyName, name: t.repName, hasSeal: !!t.hasSeal }));
+  return [...fromEmployees, ...fromTenants];
+}
+
+function renderAttendeesChecklist(selectedIds){
+  const el = document.getElementById('mm_attendeesBody');
+  const candidates = getAttendeeCandidates();
+  if(candidates.length === 0){
+    el.innerHTML = '<div style="font-size:12.5px; color:var(--mist);">등록된 직원/입주자가 없어요. 먼저 "직원 관리" 또는 "입주자 관리"에서 등록해주세요.</div>';
+    return;
+  }
+  el.innerHTML = candidates.map(c => `
+    <label style="display:flex; align-items:center; gap:8px; font-size:13.5px; padding:4px 0;">
+      <input type="checkbox" class="mm_attendee_cb" value="${c.id}" ${selectedIds && selectedIds.includes(c.id) ? 'checked' : ''} style="width:auto;">
+      ${escapeHtml(c.org)} · ${escapeHtml(c.name)}${c.hasSeal ? '' : ' <span style="color:var(--danger); font-size:11px;">(서명 미등록)</span>'}
+    </label>
+  `).join('');
+}
+
+async function saveMeetingMinutes(){
+  const btn = document.getElementById('mm_saveBtn');
+  const title = document.getElementById('mm_title').value.trim();
+  if(!title){ alert('회의명을 입력해주세요.'); return; }
+  btn.disabled = true; btn.textContent = '저장 중...';
+  const id = document.getElementById('mm_editId').value || ('mm-'+Date.now());
+  const existing = data.meetingMinutes.find(d=>d.id===id) || {};
+  const photo1File = await readFileAsData(document.getElementById('mm_photo1File'));
+  const photo2File = await readFileAsData(document.getElementById('mm_photo2File'));
+  const attendeeIds = Array.from(document.querySelectorAll('.mm_attendee_cb:checked')).map(cb=>cb.value);
+
+  const doc = {
+    id,
+    title,
+    writerOrg: document.getElementById('mm_writerOrg').value.trim(),
+    writerName: document.getElementById('mm_writerName').value.trim(),
+    meetingDate: document.getElementById('mm_meetingDate').value,
+    meetingTime: document.getElementById('mm_meetingTime').value.trim(),
+    location: document.getElementById('mm_location').value.trim(),
+    agenda: document.getElementById('mm_agenda').value,
+    contentSummary: document.getElementById('mm_contentSummary').value,
+    resultSummary: document.getElementById('mm_resultSummary').value,
+    attendeeIds,
+    hasPhoto1: photo1File ? true : !!existing.hasPhoto1,
+    hasPhoto2: photo2File ? true : !!existing.hasPhoto2,
+    contact: document.getElementById('mm_contact').value.trim(),
+    updated: Date.now()
+  };
+  if(photo1File){
+    const ok = await saveFileBlob(id, 'photo1', photo1File);
+    if(!ok){ btn.disabled = false; btn.textContent = '저장'; return; }
+  }
+  if(photo2File){
+    const ok = await saveFileBlob(id, 'photo2', photo2File);
+    if(!ok){ btn.disabled = false; btn.textContent = '저장'; return; }
+  }
+  const idx = data.meetingMinutes.findIndex(d=>d.id===id);
+  if(idx>=0) data.meetingMinutes[idx]=doc; else data.meetingMinutes.push(doc);
+  cacheLocal('meetingMinutes');
+  const ok = await saveItemToFirestore('meetingMinutes', doc);
+  btn.disabled = false; btn.textContent = '저장';
+  if(!ok) return;
+  closeModal('meetingMinutes');
+  render();
+}
+
+// ===== 심사결과 알림 공문: 위원/지원자 동적 관리 =====
+let officialJudges = [];
+let officialCandidates = [];
+
+
+function renderJudgesRows(){
+  const el = document.getElementById('rvn_judgesBody');
+  el.innerHTML = officialJudges.map((j, i) => `
+    <div style="display:flex; gap:8px; align-items:center;">
+      <input placeholder="이름 (예: 이유한, 일자리경제과)" value="${escapeHtml(j.name)}" oninput="officialJudges[${i}].name=this.value; renderCandidatesRows();" style="flex:2;">
+      <input placeholder="직함 (선택, 예: 대표)" value="${escapeHtml(j.title||'')}" oninput="officialJudges[${i}].title=this.value;" style="flex:1;">
+      <label style="display:flex; align-items:center; gap:4px; font-size:12.5px; white-space:nowrap;"><input type="checkbox" ${j.attended?'checked':''} onchange="officialJudges[${i}].attended=this.checked; renderCandidatesRows();" style="width:auto;">참석</label>
+      <button type="button" class="icon-btn del" onclick="removeJudgeRow(${i})">삭제</button>
+    </div>
+  `).join('');
+}
+
+function addJudgeRow(){
+  officialJudges.push({ id: 'j-'+Date.now()+Math.random().toString(36).slice(2,6), name:'', title:'', attended:true });
+  renderJudgesRows();
+  renderCandidatesRows();
+}
+
+function removeJudgeRow(i){
+  officialJudges.splice(i,1);
+  renderJudgesRows();
+  renderCandidatesRows();
+}
+
+function collectJudgesFromForm(){
+  return officialJudges.filter(j => j.name.trim());
+}
+
+// 대면심사(70점 환산) = (심사위원 전원 점수합 ÷ 위원수) × 0.7, 불참 위원은 점수 0으로 포함
+function calcFaceScore(candidate){
+  const attendingJudges = officialJudges.filter(j => j.attended);
+  if(attendingJudges.length === 0) return 0;
+  const sum = attendingJudges.reduce((s,j) => s + (parseFloat(candidate.scores[j.id]) || 0), 0);
+  return Math.round((sum / attendingJudges.length) * 0.7 * 100) / 100;
+}
+function calcFinalScore(candidate){
+  const doc = parseFloat(candidate.docScore) || 0;
+  return Math.round((doc + calcFaceScore(candidate)) * 100) / 100;
+}
+
+function renderCandidatesRows(){
+  const el = document.getElementById('rvn_candidatesBody');
+  el.innerHTML = officialCandidates.map((c, i) => `
+    <div style="border:1px solid var(--line); border-radius:6px; padding:10px 12px;">
+      <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
+        <input placeholder="발표자 이름" value="${escapeHtml(c.name)}" oninput="officialCandidates[${i}].name=this.value;" style="flex:1; font-weight:700;">
+        <button type="button" class="icon-btn del" onclick="removeCandidateRow(${i})">삭제</button>
+      </div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
+        <label style="font-size:12px; color:var(--mist);">서류심사<br>(30점)<br><input type="number" value="${c.docScore??''}" oninput="officialCandidates[${i}].docScore=this.value; updateCandidateScoreDisplay(${i});" style="width:80px;"></label>
+        ${officialJudges.map(j => j.attended ? `
+          <label style="font-size:12px; color:var(--mist);">${escapeHtml(j.name)||'위원'}<br><input type="number" value="${c.scores[j.id]??''}" oninput="officialCandidates[${i}].scores['${j.id}']=this.value; updateCandidateScoreDisplay(${i});" style="width:80px;"></label>
+        ` : `
+          <label style="font-size:12px; color:var(--mist);">${escapeHtml(j.name)||'위원'}<br><input value="불참" disabled style="width:80px; background:var(--paper-2);"></label>
+        `).join('')}
+      </div>
+      <div id="rvn_cand_score_${i}" style="font-size:12.5px; color:var(--navy); margin-bottom:8px;"></div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <select onchange="officialCandidates[${i}].moveInSpace=this.value;" style="flex:2;">
+          <option value="">-- 건물 선택 --</option>
+          ${data.buildings.map(b => `<option value="${escapeHtml(b.officialName||b.name)}" ${c.moveInSpace===(b.officialName||b.name)?'selected':''}>${escapeHtml(b.officialName||b.name)}</option>`).join('')}
+        </select>
+        <select onchange="officialCandidates[${i}].result=this.value;" style="flex:1;">
+          <option value="합격" ${c.result==='합격'?'selected':''}>합격</option>
+          <option value="불합격" ${c.result==='불합격'?'selected':''}>불합격</option>
+          <option value="보류" ${c.result==='보류'?'selected':''}>보류</option>
+        </select>
+      </div>
+    </div>
+  `).join('');
+  officialCandidates.forEach((c,i) => updateCandidateScoreDisplay(i));
+}
+
+function updateCandidateScoreDisplay(i){
+  const c = officialCandidates[i];
+  const box = document.getElementById(`rvn_cand_score_${i}`);
+  if(!box || !c) return;
+  const face = calcFaceScore(c);
+  const final = calcFinalScore(c);
+  box.textContent = `대면심사(70점 환산): ${face} · 최종점수(100점): ${final}`;
+}
+
+function addCandidateRow(){
+  officialCandidates.push({ id: 'c-'+Date.now()+Math.random().toString(36).slice(2,6), name:'', docScore:'', scores:{}, moveInSpace:'', result:'합격' });
+  renderCandidatesRows();
+}
+
+function removeCandidateRow(i){
+  officialCandidates.splice(i,1);
+  renderCandidatesRows();
+}
+
+function collectCandidatesFromForm(){
+  return officialCandidates.filter(c => c.name.trim()).map(c => ({
+    ...c,
+    faceScore: calcFaceScore(c),
+    finalScore: calcFinalScore(c)
+  }));
+}
+
 async function saveOfficial(){
   const btn = document.getElementById('of_saveBtn');
   const title = document.getElementById('of_title').value.trim();
@@ -3775,6 +4131,7 @@ async function saveOfficial(){
     title,
     body: document.getElementById('of_body').value,
     subItems: document.getElementById('of_subItems').value,
+    attachments: document.getElementById('of_attachments').value,
     contact: document.getElementById('of_contact').value.trim(),
     updated: Date.now()
   };
@@ -3787,6 +4144,46 @@ async function saveOfficial(){
   closeModal('official');
   render();
   printOfficialDocument(doc);
+}
+
+async function saveReviewNotice(){
+  const btn = document.getElementById('rvn_saveBtn');
+  try{
+    const title = document.getElementById('rvn_title').value.trim();
+    if(!title){ alert('제목을 입력해주세요.'); return; }
+    btn.disabled = true; btn.textContent = '저장 중...';
+    const id = document.getElementById('rvn_editId').value || ('rvn-'+Date.now());
+    const doc = {
+      id,
+      docNo: document.getElementById('rvn_docNo').value.trim() || generateDocNo(),
+      effectiveDate: document.getElementById('rvn_effectiveDate').value || new Date().toISOString().slice(0,10),
+      recipient: document.getElementById('rvn_recipient').value.trim(),
+      via: document.getElementById('rvn_via').value.trim(),
+      title,
+      intro: document.getElementById('rvn_intro').value,
+      reviewDate: document.getElementById('rvn_date').value.trim(),
+      reviewLocation: document.getElementById('rvn_location').value.trim(),
+      reviewContent: document.getElementById('rvn_content').value.trim(),
+      judges: collectJudgesFromForm(),
+      candidates: collectCandidatesFromForm(),
+      contact: document.getElementById('rvn_contact').value.trim(),
+      updated: Date.now()
+    };
+    const idx = data.reviewNotices.findIndex(d=>d.id===id);
+    if(idx>=0) data.reviewNotices[idx]=doc; else data.reviewNotices.push(doc);
+    cacheLocal('reviewNotices');
+    const ok = await saveItemToFirestore('reviewNotices', doc);
+    btn.disabled = false; btn.textContent = '저장하고 발급';
+    if(!ok) return;
+    closeModal('reviewNotices');
+    render();
+    printReviewNotice(doc);
+  }catch(err){
+    console.error(err);
+    btn.disabled = false; btn.textContent = '저장하고 발급';
+    alert('저장 중 오류가 발생했어요: ' + err.message + '\n\n(개발자 도구 콘솔에 자세한 위치가 남았어요)');
+    console.error('saveReviewNotice 오류 상세:', err.stack || err);
+  }
 }
 
 async function saveBuilding(){
@@ -3820,6 +4217,8 @@ async function saveTenant(){
   if(!companyName){ alert('회사명을 입력해주세요.'); return; }
   btn.disabled = true; btn.textContent = '저장 중...';
   const id = document.getElementById('tn_editId').value || ('tn-'+Date.now());
+  const existing = data.tenants.find(d=>d.id===id) || {};
+  const sealFile = await readFileAsData(document.getElementById('tn_sealFile'));
   const tenant = {
     id,
     companyName,
@@ -3830,8 +4229,13 @@ async function saveTenant(){
     contact: document.getElementById('tn_contact').value.trim(),
     purpose: document.getElementById('tn_purpose').value.trim(),
     notes: document.getElementById('tn_notes').value.trim(),
+    hasSeal: sealFile ? true : !!existing.hasSeal,
     updated: Date.now()
   };
+  if(sealFile){
+    const ok = await saveFileBlob(id, 'seal', sealFile);
+    if(!ok){ btn.disabled = false; btn.textContent = '저장'; return; }
+  }
   const idx = data.tenants.findIndex(d=>d.id===id);
   if(idx>=0) data.tenants[idx]=tenant; else data.tenants.push(tenant);
   cacheLocal('tenants');
@@ -3840,6 +4244,17 @@ async function saveTenant(){
   if(!ok) return;
   closeModal('tenants');
   render();
+}
+
+async function removeTenantSeal(id){
+  if(!confirm('서명(도장) 이미지를 삭제할까요?')) return;
+  await deleteFileBlob(id, 'seal');
+  const tenant = data.tenants.find(d=>d.id===id);
+  if(tenant){
+    tenant.hasSeal = false;
+    await saveItemToFirestore('tenants', tenant);
+  }
+  document.getElementById('tn_seal_current').innerHTML = '등록된 서명 없음';
 }
 
 async function saveRule(){
@@ -5170,9 +5585,14 @@ function renderUcChecklistTable(rows){
   });
 
   const CATEGORY_ORDER = ['사전준비', '행사중', '행사후'];
+  function normalizeCategoryLabel(label){ return (label||'').replace(/\s/g, ''); }
+  function categoryOrderIndex(category){
+    const norm = normalizeCategoryLabel(category);
+    return CATEGORY_ORDER.findIndex(key => norm.startsWith(key));
+  }
   function sortByCategoryOrder(items){
     return items.slice().sort((a,b) => {
-      const ia = CATEGORY_ORDER.indexOf(a.category), ib = CATEGORY_ORDER.indexOf(b.category);
+      const ia = categoryOrderIndex(a.category), ib = categoryOrderIndex(b.category);
       const oa = ia === -1 ? 99 : ia, ob = ib === -1 ? 99 : ib;
       return oa - ob;
     });
@@ -6603,10 +7023,18 @@ function printLeaseContract(doc){
 
 const KOREAN_ORDINALS = ['가','나','다','라','마','바','사','아','자','차','카','타','파','하'];
 
+// 표 열 제목 등에서 이름이 길면(5자 이상) 절반으로 나눠 줄바꿈되게 함
+function wrapLongLabel(text){
+  if(!text || text.length < 5) return escapeHtml(text||'');
+  const mid = Math.ceil(text.length/2);
+  return escapeHtml(text.slice(0,mid)) + '<br>' + escapeHtml(text.slice(mid));
+}
+
 function printOfficialDocument(doc){
   const company = data.settings.company || {};
   const bodyLines = (doc.body||'').split('\n').map(l=>l.trim()).filter(Boolean);
   const subLines = (doc.subItems||'').split('\n').map(l=>l.trim()).filter(Boolean);
+  const attachLines = (doc.attachments||'').split('\n').map(l=>l.trim()).filter(Boolean);
   const contact = doc.contact || company.issuerName || '';
 
   const win = window.open('', '_blank');
@@ -6633,6 +7061,10 @@ function printOfficialDocument(doc){
   .sub-items .line{ display:flex; margin-bottom:16px; }
   .sub-items .line .num{ width:34px; flex-shrink:0; }
   .sub-items .line .txt{ flex:1; }
+  .attach-block{ margin:0 0 40px; font-size:14.5px; }
+  .attach-block .arow{ display:flex; margin-bottom:8px; }
+  .attach-block .alabel{ width:52px; flex-shrink:0; font-weight:700; }
+  .attach-block .atxt{ flex:1; }
   .sign-block{ text-align:center; font-size:19px; font-weight:700; margin:60px 0 36px; }
   .sign-block .seal-wrap{ position:relative; display:inline-block; padding-right:70px; }
   .sign-block img.seal-img{ width:78px; height:78px; position:absolute; right:-14px; top:50%; transform:translateY(-50%); opacity:0.9; }
@@ -6667,6 +7099,12 @@ function printOfficialDocument(doc){
   <div class="sub-items">
     ${subLines.map((line,i) => `<div class="line"><div class="num">${KOREAN_ORDINALS[i]||(i+1)}.</div><div class="txt">${escapeHtml(line)}</div></div>`).join('')}
   </div>
+
+  ${attachLines.length > 0 ? `
+  <div class="attach-block">
+    ${attachLines.map((line,i) => `<div class="arow"><div class="alabel">붙임${i+1}.</div><div class="atxt">${escapeHtml(line)}${i===attachLines.length-1?'&nbsp;&nbsp;끝.':''}</div></div>`).join('')}
+  </div>
+  ` : `<div style="margin:0 0 40px; font-size:14.5px;">끝.</div>`}
 
   <div class="sign-block">
     <span class="seal-wrap">
@@ -6710,6 +7148,307 @@ function printOfficialDocument(doc){
       const slot = win.document.getElementById('logoSlot');
       if(slot) slot.appendChild(img);
     }
+    Promise.all(imgLoadPromises).then(() => win.print());
+  });
+}
+
+function printReviewNotice(doc){
+  const company = data.settings.company || {};
+  const contact = doc.contact || company.issuerName || '';
+
+  const judges = doc.judges || [];
+  const candidates = doc.candidates || [];
+  const judgesLine = judges.map(j => j.attended ? `${j.name}${j.title?' '+j.title:''}` : `${j.name}(불참)`).join(', ');
+
+  const win = window.open('', '_blank');
+  if(!win){ alert('팝업이 차단되어 발급 화면을 열 수 없어요. 브라우저 주소창의 팝업 차단 아이콘을 눌러 이 사이트의 팝업을 허용해주세요.'); return; }
+  win.document.write(`
+<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>${escapeHtml(doc.title)}</title>
+<style>
+  body{ font-family:'Malgun Gothic','Noto Sans KR',sans-serif; padding:55px 70px; color:#111; font-size:14.5px; line-height:1.7; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .letterhead{ display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:22px; }
+  .letterhead .center{ flex:1; text-align:center; }
+  .letterhead .sub{ font-size:13px; color:#333; margin-bottom:6px; }
+  .letterhead .brand{ font-size:30px; font-weight:800; letter-spacing:1px; }
+  .letterhead .logo-slot{ width:110px; display:flex; justify-content:flex-end; }
+  .letterhead .logo-slot img{ max-width:110px; max-height:80px; object-fit:contain; }
+  hr{ border:none; border-top:1.5px solid #111; margin:0 0 16px; }
+  .meta{ margin-bottom:16px; }
+  .meta-row{ display:flex; margin-bottom:9px; font-size:14.5px; }
+  .meta-row .label{ width:110px; flex-shrink:0; font-weight:400; }
+  .meta-row > div:last-child{ flex:1; min-width:0; }
+  .content{ margin:22px 0; }
+  .content .line{ display:flex; margin-bottom:8px; }
+  .content .line .num{ width:26px; flex-shrink:0; }
+  .content .line .txt{ flex:1; }
+  .attach-block{ margin:0 0 40px; font-size:14.5px; }
+  .attach-block .arow{ display:flex; margin-bottom:8px; }
+  .attach-block .alabel{ width:52px; flex-shrink:0; font-weight:700; }
+  .attach-block .atxt{ flex:1; }
+  .review-heading{ font-weight:700; font-size:15px; margin:20px 0 10px; }
+  .review-items{ margin:0 0 20px 20px; }
+  .review-items .line{ display:flex; margin-bottom:8px; }
+  .review-items .line .num{ width:95px; flex-shrink:0; white-space:nowrap; }
+  .review-items .line .txt{ flex:1; min-width:0; }
+  .review-table{ width:100%; border-collapse:collapse; margin:12px 0 24px; font-size:9pt; table-layout:fixed; }
+  .review-table th, .review-table td{ border:1px solid #333; padding:6px 10px; text-align:center; white-space:nowrap; }
+  .review-table th{ background:#dceaf7; font-weight:700; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .sign-block{ text-align:center; font-size:19px; font-weight:700; margin:60px 0 36px; }
+  .sign-block .seal-wrap{ position:relative; display:inline-block; padding-right:70px; }
+  .sign-block img.seal-img{ width:78px; height:78px; position:absolute; right:-14px; top:50%; transform:translateY(-50%); opacity:0.9; }
+  footer{ border-top:1.5px solid #999; padding-top:12px; font-size:11.5px; color:#333; line-height:1.9; }
+  footer .frow{ display:flex; }
+  footer .frow .col{ display:flex; width:50%; }
+  footer b{ display:inline-block; width:56px; flex-shrink:0; font-weight:700; }
+  @media print{ body{ padding:30px 40px; } }
+</style>
+</head><body>
+  <div class="letterhead">
+    <div class="logo-slot" id="logo2Slot"></div>
+    <div class="center">
+      <div class="sub">커뮤니티 디자인</div>
+      <div class="brand">${escapeHtml(company.name || '주식회사 공공플랜')}</div>
+    </div>
+    <div class="logo-slot" id="logoSlot"></div>
+  </div>
+  <hr>
+  <div class="meta">
+    <div class="meta-row"><div class="label">수&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;신</div><div>${escapeHtml(doc.recipient)}</div></div>
+    <div class="meta-row"><div class="label">(경&nbsp;&nbsp;유)</div><div>${doc.via ? escapeHtml(doc.via) : ''}</div></div>
+    <div class="meta-row"><div class="label">제&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;목</div><div>${escapeHtml(doc.title)}</div></div>
+  </div>
+  <hr>
+  <div class="content">
+    <div class="line"><div class="num">1.</div><div class="txt">귀 기관의 무궁한 발전을 기원합니다.</div></div>
+    <div class="line"><div class="num">2.</div><div class="txt">${escapeHtml(doc.intro||'')}</div></div>
+  </div>
+
+  <div class="review-heading">■ 심사개요</div>
+  <div class="review-items">
+    <div class="line"><div class="num">가. 일&nbsp;&nbsp;시 :</div><div class="txt">${escapeHtml(doc.reviewDate||'')}</div></div>
+    <div class="line"><div class="num">나. 장&nbsp;&nbsp;소 :</div><div class="txt">${escapeHtml(doc.reviewLocation||'')}</div></div>
+    <div class="line"><div class="num">다. 내&nbsp;&nbsp;용 :</div><div class="txt">${escapeHtml(doc.reviewContent||'')}</div></div>
+    <div class="line"><div class="num">라. 심사위원 :</div><div class="txt">${escapeHtml(judgesLine)}</div></div>
+  </div>
+
+  <div class="review-heading">■ 심사결과</div>
+  <table class="review-table">
+    <thead><tr>
+      <th style="width:55px;">발표자</th>
+      <th style="width:48px;">서류심사<br>(30점)</th>
+      ${judges.map(j => `<th style="width:48px;">${wrapLongLabel(j.name)}</th>`).join('')}
+      <th style="width:55px;">대면심사<br>(70점 환산)</th>
+      <th style="width:52px;">최종점수<br>(100점)</th>
+      <th style="width:150px;">입주 예정 공간</th>
+      <th style="width:42px;">합격<br>여부</th>
+    </tr></thead>
+    <tbody>
+      ${candidates.map(c => `<tr>
+        <td>${escapeHtml(c.name)}</td>
+        <td>${c.docScore||0}</td>
+        ${judges.map(j => `<td>${j.attended ? (c.scores[j.id]||0) : '불참'}</td>`).join('')}
+        <td>${c.faceScore}</td>
+        <td>${c.finalScore}</td>
+        <td style="white-space:normal; width:150px; word-break:keep-all;">${escapeHtml(c.moveInSpace||'')}</td>
+        <td>${escapeHtml(c.result||'')}</td>
+      </tr>`).join('')}
+    </tbody>
+  </table>
+
+  <div style="margin:0 0 40px; font-size:14.5px;">끝.</div>
+
+  <div class="sign-block">
+    <span class="seal-wrap">
+      ${escapeHtml(company.name || '')} ${escapeHtml(company.issuerPosition || '대표이사')}
+      <span id="sealSlot"></span>
+    </span>
+  </div>
+
+  <footer>
+    <div class="frow">
+      <div class="col"><b>담당자</b> ${escapeHtml(contact)}</div>
+      <div class="col"><b>대표이사</b> ${escapeHtml(company.ceo || '')}</div>
+    </div>
+    <div class="frow">
+      <div class="col"><b>시행</b> ${escapeHtml(company.name||'')} ${doc.docNo ? '('+escapeHtml(doc.docNo)+', '+escapeHtml(doc.effectiveDate||'')+')' : ''}</div>
+      <div class="col"><b>접수</b></div>
+    </div>
+    <div class="frow" style="margin-top:8px;">${company.zip ? '우 '+escapeHtml(company.zip)+'&nbsp;&nbsp;' : ''}${escapeHtml(company.address||'')}${company.website ? '&nbsp;&nbsp;&nbsp;'+escapeHtml(company.website) : ''}</div>
+    <div class="frow">${company.phone ? '전화 '+escapeHtml(company.phone)+'&nbsp;&nbsp;&nbsp;&nbsp;' : ''}${company.fax ? '전송 '+escapeHtml(company.fax)+'&nbsp;&nbsp;&nbsp;&nbsp;' : ''}${company.email ? '이메일 '+escapeHtml(company.email) : ''}</div>
+  </footer>
+</body></html>`);
+  win.document.close();
+
+  Promise.all([
+    company.hasSeal ? fetchFileBlob('_company', 'seal') : Promise.resolve(null),
+    company.hasLogo ? fetchFileBlob('_company', 'logo') : Promise.resolve(null),
+    company.hasLogo2 ? fetchFileBlob('_company', 'logo2') : Promise.resolve(null)
+  ]).then(([sealFile, logoFile, logo2File]) => {
+    const imgLoadPromises = [];
+    if(sealFile){
+      const img = win.document.createElement('img');
+      img.className = 'seal-img';
+      imgLoadPromises.push(waitImgLoad(img));
+      img.src = sealFile.dataUrl;
+      const slot = win.document.getElementById('sealSlot');
+      if(slot) slot.appendChild(img);
+    }
+    if(logoFile){
+      const img = win.document.createElement('img');
+      imgLoadPromises.push(waitImgLoad(img));
+      img.src = logoFile.dataUrl;
+      const slot = win.document.getElementById('logoSlot');
+      if(slot) slot.appendChild(img);
+    }
+    if(logo2File){
+      const img = win.document.createElement('img');
+      imgLoadPromises.push(waitImgLoad(img));
+      img.src = logo2File.dataUrl;
+      const slot = win.document.getElementById('logo2Slot');
+      if(slot) slot.appendChild(img);
+    }
+    Promise.all(imgLoadPromises).then(() => win.print());
+  });
+}
+
+// ===== 정기 회의록: 회의 내용(요약) 파싱 - 번호 줄은 굵게, 그 외(발언자:내용)는 들여쓰기 =====
+function renderMeetingContentSummary(text){
+  const lines = (text||'').split('\n').map(l=>l.trim()).filter(Boolean);
+  return lines.map(line => {
+    if(/^\d+\./.test(line)){
+      return `<div style="font-weight:700; margin:12px 0 4px;">${escapeHtml(line)}</div>`;
+    }
+    return `<div style="margin:0 0 4px 20px; font-size:10px;">${escapeHtml(line)}</div>`;
+  }).join('');
+}
+
+function buildMeetingMinutesFragment(doc){
+  const agendaLines = (doc.agenda||'').split('\n').map(l=>l.trim()).filter(Boolean);
+  const resultLines = (doc.resultSummary||'').split('\n').map(l=>l.trim()).filter(Boolean);
+  return `
+  <div class="mm-page">
+    <div class="title">${escapeHtml(doc.title)}</div>
+    <table class="meta-table">
+      <tr><td class="label">작성자 소속</td><td>${escapeHtml(doc.writerOrg||'')}</td><td class="label">작성자명</td><td>${escapeHtml(doc.writerName||'')}</td></tr>
+      <tr><td class="label">회의 일시</td><td>${escapeHtml(doc.meetingDate||'')}</td><td class="label">회의 시간</td><td>${escapeHtml(doc.meetingTime||'')}</td></tr>
+      <tr><td class="label">장소</td><td colspan="3">${escapeHtml(doc.location||'')}</td></tr>
+      <tr><td class="label">안건</td><td colspan="3">${agendaLines.map((l,i)=>`${i+1}. ${escapeHtml(l)}`).join('<br>')}</td></tr>
+    </table>
+
+    <div class="section-title">회의 내용 (요약)</div>
+    <div class="section-box">${renderMeetingContentSummary(doc.contentSummary)}</div>
+
+    <div class="section-title">회의 결과</div>
+    <div class="section-box">${resultLines.map((l,i)=>`<div style="margin-bottom:6px;">${i+1}. ${escapeHtml(l)}</div>`).join('')}</div>
+
+    ${(doc.hasPhoto1 || doc.hasPhoto2) ? `
+    <div class="section-title">회의 사진</div>
+    <div class="section-box">
+      <div class="photos">
+        ${doc.hasPhoto1 ? `<img id="mmPhoto1Slot">` : ''}
+        ${doc.hasPhoto2 ? `<img id="mmPhoto2Slot">` : ''}
+      </div>
+    </div>
+    ` : ''}
+  </div>`;
+}
+
+function buildMeetingConfirmationFragment(doc){
+  const agendaLines = (doc.resultSummary||'').split('\n').map(l=>l.trim()).filter(Boolean);
+  const candidates = getAttendeeCandidates();
+  const attendees = (doc.attendeeIds||[]).map(id => candidates.find(c=>c.id===id)).filter(Boolean);
+  const dateFormatted = doc.meetingDate ? formatKoreanDate(doc.meetingDate) : '';
+  const agendaSummary = agendaLines.slice(0,4).join(', ');
+  return `
+  <div class="mc-page">
+    <div class="title">${escapeHtml(doc.title)} 논의내용 확인서</div>
+    <table class="meta-table">
+      <tr><td class="label">회의명</td><td colspan="3">${escapeHtml(doc.title)}</td></tr>
+      <tr><td class="label">작성자명</td><td>${escapeHtml(doc.writerName||'')}</td><td class="label">장소</td><td>${escapeHtml(doc.location||'')}</td></tr>
+      <tr><td class="label">회의 일시</td><td>${escapeHtml(doc.meetingDate||'')}</td><td class="label">회의 시간</td><td>${escapeHtml(doc.meetingTime||'')}</td></tr>
+      <tr><td class="label">안건</td><td colspan="3">${agendaLines.map((l,i)=>`${i+1}. ${escapeHtml(l)}`).join('<br>')}</td></tr>
+    </table>
+
+    <div class="confirm-text">
+      <p>${escapeHtml(dateFormatted)} 개최된 「${escapeHtml(doc.title)}」에 참석하여 회의 내용을 공유받았으며, 회의록에 기재된 내용이 회의에서 논의된 사항과 상이하지 않음을 확인합니다.</p>
+      <p>또한 ${escapeHtml(agendaSummary)} 등에 대한 논의 내용을 확인하였음을 증명합니다.</p>
+    </div>
+
+    <div class="sign-title">위 결의사항의 명확을 기하기 위하여 연서・날인합니다.</div>
+
+    <table class="attend-table">
+      <thead><tr><th style="width:50px;"></th><th style="width:130px;">소속</th><th style="width:130px;">성명</th><th>서명</th></tr></thead>
+      <tbody>
+        ${attendees.map((a,i) => `<tr>${i===0?`<td class="groupLabel" rowspan="${attendees.length}">참석자</td>`:''}<td>${escapeHtml(a.org)}</td><td>${escapeHtml(a.name)}</td><td>${a.hasSeal ? `<img class="seal" id="attendSeal${i}">` : ''}</td></tr>`).join('')}
+      </tbody>
+    </table>
+
+    <div class="footer-date">${doc.meetingDate ? escapeHtml(doc.meetingDate.replace(/-/g,'. ')+'.') : ''}</div>
+  </div>`;
+}
+
+// 회의록 + 확인서를 한 창(한 장의 PDF로 인쇄 가능)에 이어서 보여줌
+function printMeetingBoth(doc){
+  const candidates = getAttendeeCandidates();
+  const attendees = (doc.attendeeIds||[]).map(id => candidates.find(c=>c.id===id)).filter(Boolean);
+
+  const win = window.open('', '_blank');
+  if(!win){ alert('팝업이 차단되어 발급 화면을 열 수 없어요. 브라우저 주소창의 팝업 차단 아이콘을 눌러 이 사이트의 팝업을 허용해주세요.'); return; }
+  win.document.write(`
+<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>${escapeHtml(doc.title)}</title>
+<style>
+  body{ font-family:'Malgun Gothic','Noto Sans KR',sans-serif; color:#111; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .title{ text-align:center; font-size:20px; font-weight:800; margin-bottom:20px; }
+  table.meta-table{ width:100%; border-collapse:collapse; margin-bottom:18px; font-size:12.5px; }
+  table.meta-table td{ border:1px solid #333; padding:7px 10px; }
+  table.meta-table td.label{ background:#f2f2f2; font-weight:700; width:100px; text-align:center; }
+  .section-title{ background:#f2f2f2; font-weight:700; padding:6px 10px; margin:18px 0 0; border:1px solid #333; text-align:center; }
+  .section-box{ border:1px solid #333; border-top:none; padding:10px 12px; font-size:11.5px; }
+  .photos{ display:flex; gap:12px; }
+  .photos img{ width:48%; height:200px; object-fit:cover; border:1px solid #ccc; }
+
+  .mm-page{ padding:40px 55px; font-size:11px; line-height:1.6; page-break-after:always; }
+  .mm-page table.meta-table{ font-size:11px; }
+  .mm-page .section-box{ font-size:10px; }
+  .mm-page .title{ font-size:18px; }
+  .mc-page{ padding:40px 55px; font-size:13px; line-height:1.7; }
+  .mc-page .confirm-text{ margin:20px 0; font-size:13px; }
+  .mc-page .confirm-text p{ margin:0 0 12px; }
+  .mc-page .sign-title{ text-align:center; margin:24px 0 14px; font-size:13.5px; }
+  .mc-page table.attend-table{ width:100%; border-collapse:collapse; font-size:12.5px; }
+  .mc-page table.attend-table th, .mc-page table.attend-table td{ border:1px solid #333; padding:4px 10px; text-align:center; }
+  .mc-page table.attend-table th{ background:#f2f2f2; font-weight:700; }
+  .mc-page table.attend-table td.groupLabel{ background:#f2f2f2; font-weight:700; }
+  .mc-page table.attend-table img.seal{ width:30px; height:30px; object-fit:contain; }
+  .mc-page .footer-date{ text-align:center; margin-top:30px; font-size:13.5px; }
+  @media print{ .mm-page, .mc-page{ padding:26px 40px; } }
+</style>
+</head><body>
+${buildMeetingMinutesFragment(doc)}
+${buildMeetingConfirmationFragment(doc)}
+</body></html>`);
+  win.document.close();
+
+  Promise.all([
+    doc.hasPhoto1 ? fetchFileBlob(doc.id, 'photo1') : Promise.resolve(null),
+    doc.hasPhoto2 ? fetchFileBlob(doc.id, 'photo2') : Promise.resolve(null),
+    ...attendees.map(a => a.hasSeal ? fetchFileBlob(a.id, 'seal') : Promise.resolve(null))
+  ]).then(([photo1File, photo2File, ...sealFiles]) => {
+    const imgLoadPromises = [];
+    if(photo1File){
+      const img = win.document.getElementById('mmPhoto1Slot');
+      if(img){ imgLoadPromises.push(waitImgLoad(img)); img.src = photo1File.dataUrl; }
+    }
+    if(photo2File){
+      const img = win.document.getElementById('mmPhoto2Slot');
+      if(img){ imgLoadPromises.push(waitImgLoad(img)); img.src = photo2File.dataUrl; }
+    }
+    sealFiles.forEach((sealFile, i) => {
+      if(sealFile){
+        const img = win.document.getElementById(`attendSeal${i}`);
+        if(img){ imgLoadPromises.push(waitImgLoad(img)); img.src = sealFile.dataUrl; }
+      }
+    });
     Promise.all(imgLoadPromises).then(() => win.print());
   });
 }
@@ -6831,6 +7570,8 @@ function resetEmployeeForm(){
   document.getElementById('emp_isIntern').checked = false;
   document.getElementById('emp_color').value = '#c0392b';
   document.getElementById('emp_allowIssue').checked = false;
+  document.getElementById('emp_sealFile').value = '';
+  document.getElementById('emp_seal_current').innerHTML = '등록된 서명 없음';
   document.getElementById('emp_saveBtn').textContent = '직원 추가';
   document.getElementById('emp_cancelEditBtn').style.display = 'none';
 }
@@ -6849,6 +7590,8 @@ function editEmployeeForm(emp){
   document.getElementById('emp_isIntern').checked = !!emp.isIntern;
   document.getElementById('emp_color').value = emp.color || '#c0392b';
   document.getElementById('emp_allowIssue').checked = !!emp.allowIssue;
+  document.getElementById('emp_sealFile').value = '';
+  document.getElementById('emp_seal_current').innerHTML = emp.hasSeal ? `등록된 서명 있음 <button type="button" onclick="removeEmployeeSeal('${emp.id}')" class="icon-btn del" style="margin-left:6px;">🗑 삭제</button>` : '등록된 서명 없음';
   document.getElementById('emp_saveBtn').textContent = '수정 저장';
   document.getElementById('emp_cancelEditBtn').style.display = 'inline-block';
 }
@@ -6860,6 +7603,7 @@ async function saveEmployee(){
   btn.disabled = true;
   const id = document.getElementById('emp_editId').value || ('emp-'+Date.now());
   const existing = data.employees.find(d=>d.id===id) || {};
+  const sealFile = await readFileAsData(document.getElementById('emp_sealFile'));
   const emp = {
     ...existing,
     id,
@@ -6875,8 +7619,13 @@ async function saveEmployee(){
     isIntern: document.getElementById('emp_isIntern').checked,
     color: document.getElementById('emp_color').value,
     allowIssue: document.getElementById('emp_allowIssue').checked,
+    hasSeal: sealFile ? true : !!existing.hasSeal,
     updated: Date.now()
   };
+  if(sealFile){
+    const ok = await saveFileBlob(id, 'seal', sealFile);
+    if(!ok){ btn.disabled = false; return; }
+  }
   const idx = data.employees.findIndex(d=>d.id===id);
   if(idx>=0) data.employees[idx]=emp; else data.employees.push(emp);
   cacheLocal('employees');
@@ -6885,6 +7634,17 @@ async function saveEmployee(){
   resetEmployeeForm();
   renderEmployeeList();
   render();
+}
+
+async function removeEmployeeSeal(id){
+  if(!confirm('서명(도장) 이미지를 삭제할까요?')) return;
+  await deleteFileBlob(id, 'seal');
+  const emp = data.employees.find(d=>d.id===id);
+  if(emp){
+    emp.hasSeal = false;
+    await saveItemToFirestore('employees', emp);
+  }
+  document.getElementById('emp_seal_current').innerHTML = '등록된 서명 없음';
 }
 
 async function deleteEmployee(id){
@@ -7288,6 +8048,8 @@ function render(){
     if(currentTab==='cert') hay = [d.name,d.issuer,d.notes].join(' ');
     if(currentTab==='employ') hay = [d.name,d.position,d.purpose].join(' ');
     if(currentTab==='official') hay = [d.docNo,d.title,d.recipient,d.body].join(' ');
+    if(currentTab==='reviewNotices') hay = [d.docNo,d.title,d.recipient,d.intro,...(d.candidates||[]).map(c=>c.name)].join(' ');
+    if(currentTab==='meetingMinutes') hay = [d.title,d.writerName,d.location,d.agenda,d.contentSummary].join(' ');
     if(currentTab==='career') hay = [d.name,d.duty].join(' ');
     if(currentTab==='employees') hay = [d.name,d.position,d.code,d.team].join(' ');
     if(currentTab==='buildings') hay = [d.name,d.address,d.area,d.notes].join(' ');
@@ -7364,6 +8126,14 @@ function render(){
     if(currentTab==='official'){
       if(sort==='name') return (a.title||'').localeCompare(b.title||'','ko');
       if(sort==='recipient') return (a.recipient||'').localeCompare(b.recipient||'','ko');
+    }
+    if(currentTab==='reviewNotices'){
+      if(sort==='name') return (a.title||'').localeCompare(b.title||'','ko');
+      if(sort==='recipient') return (a.recipient||'').localeCompare(b.recipient||'','ko');
+    }
+    if(currentTab==='meetingMinutes'){
+      if(sort==='name') return (a.title||'').localeCompare(b.title||'','ko');
+      if(sort==='date') return (b.meetingDate||'').localeCompare(a.meetingDate||'');
     }
     if(currentTab==='career'){
       if(sort==='name') return (a.name||'').localeCompare(b.name||'','ko');
@@ -7504,6 +8274,32 @@ function render(){
           <button class="icon-btn" onclick='printOfficialDocument(${JSON.stringify(d).replace(/'/g,"&#39;")})'>🖨 재발급/인쇄</button>
           ${!isRestricted() ? `<button class="icon-btn" onclick='openModal(${JSON.stringify(d).replace(/'/g,"&#39;")})'>수정</button>
           <button class="icon-btn del" onclick="deleteItem('official','${d.id}')">삭제</button>` : ''}
+        </div>
+      </div>`).join('') + '</div>';
+  } else if(currentTab==='reviewNotices'){
+    content.innerHTML = '<div class="grid">' + items.map(d => `
+      <div class="card">
+        <div class="meta">${escapeHtml(d.docNo || '-')}</div>
+        <h3>${escapeHtml(d.title)}</h3>
+        <div class="meta">수신: ${escapeHtml(d.recipient || '-')}</div>
+        <div class="meta">시행일자: ${escapeHtml(d.effectiveDate || '-')} · 지원자 ${(d.candidates||[]).length}명</div>
+        <div class="card-actions">
+          <button class="icon-btn" onclick='printReviewNotice(${JSON.stringify(d).replace(/'/g,"&#39;")})'>🖨 재발급/인쇄</button>
+          ${!isRestricted() ? `<button class="icon-btn" onclick='openModal(${JSON.stringify(d).replace(/'/g,"&#39;")})'>수정</button>
+          <button class="icon-btn del" onclick="deleteItem('reviewNotices','${d.id}')">삭제</button>` : ''}
+        </div>
+      </div>`).join('') + '</div>';
+  } else if(currentTab==='meetingMinutes'){
+    content.innerHTML = '<div class="grid">' + items.map(d => `
+      <div class="card">
+        <div class="meta">${escapeHtml(d.meetingDate || '-')}</div>
+        <h3>${escapeHtml(d.title)}</h3>
+        <div class="meta">작성자: ${escapeHtml(d.writerName || '-')} (${escapeHtml(d.writerOrg||'-')})</div>
+        <div class="meta">장소: ${escapeHtml(d.location || '-')} · 참석 ${(d.attendeeIds||[]).length}명</div>
+        <div class="card-actions">
+          <button class="icon-btn" onclick='printMeetingBoth(${JSON.stringify(d).replace(/'/g,"&#39;")})'>🖨 인쇄</button>
+          ${!isRestricted() ? `<button class="icon-btn" onclick='openModal(${JSON.stringify(d).replace(/'/g,"&#39;")})'>수정</button>
+          <button class="icon-btn del" onclick="deleteItem('meetingMinutes','${d.id}')">삭제</button>` : ''}
         </div>
       </div>`).join('') + '</div>';
   } else if(currentTab==='career'){
@@ -7770,6 +8566,8 @@ function renderSortOptions(){
   if(currentTab==='cert') opts = [['recent','최근수정순'],['name','이름순'],['kind','구분순'],['issuer','인원순']];
   if(currentTab==='employ') opts = [['recent','최근발급순'],['issueDate_desc','발급일순'],['name','이름순']];
   if(currentTab==='official') opts = [['recent','최근발급순'],['name','제목순'],['recipient','수신처순']];
+  if(currentTab==='reviewNotices') opts = [['recent','최근발급순'],['name','제목순'],['recipient','수신처순']];
+  if(currentTab==='meetingMinutes') opts = [['recent','최근발급순'],['name','제목순'],['date','회의일순']];
   if(currentTab==='career') opts = [['recent','최근발급순'],['name','성명순']];
   if(currentTab==='employees') opts = [['recent','최근수정순'],['name','이름순']];
   if(currentTab==='buildings') opts = [['recent','최근수정순'],['name','이름순']];
