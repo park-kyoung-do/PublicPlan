@@ -1625,6 +1625,7 @@ const EMPLOYEE_CODE_MAP = { '도':'박경도', '권':'권혜민', '은':'한고�
 let selectedEmployeeIdsByTab = { leave: null, comp: null };
 let knownEmployeeIdsByTab = { leave: new Set(), comp: new Set() };
 const COMP_DEFAULT_EXCLUDE = ['박경도', '강태호'];
+const LEAVE_LEDGER_EXCLUDE_BY_TAB = { leave: ['이정우','이유한','서민건','이재훈'], comp: ['이정우','이유한'] };
 
 function getSelectedEmployeeSet(tab){
   if(!selectedEmployeeIdsByTab[tab]){
@@ -2019,8 +2020,9 @@ function renderEmployeeFilterCheckboxes(){
   }
 
   const selectedEmployeeIds = getSelectedEmployeeSet(currentTab);
+  const excludedNames = LEAVE_LEDGER_EXCLUDE_BY_TAB[currentTab] || [];
   el.innerHTML = '<div style="font-size:12.5px; color:var(--mist); margin-bottom:6px;">표시할 인원 선택 (입사 인원 반영, 퇴사자는 자동 제외)</div><div style="display:flex; flex-wrap:wrap; gap:12px;">' +
-    data.employees.filter(e => !e.endDate).map(e => `<label style="display:flex; align-items:center; gap:6px; font-size:13px;"><input type="checkbox" ${selectedEmployeeIds.has(e.id)?'checked':''} onchange="toggleLeaveEmployeeSelect('${e.id}', this.checked)" style="width:auto;">${escapeHtml(e.name)}</label>`).join('') +
+    data.employees.filter(e => !e.endDate && !excludedNames.includes(e.name)).map(e => `<label style="display:flex; align-items:center; gap:6px; font-size:13px;"><input type="checkbox" ${selectedEmployeeIds.has(e.id)?'checked':''} onchange="toggleLeaveEmployeeSelect('${e.id}', this.checked)" style="width:auto;">${escapeHtml(e.name)}</label>`).join('') +
     '</div>';
   el.style.display = 'block';
 }
@@ -2063,7 +2065,8 @@ function renderLeaveLedger(){
     }
   } else {
     const selectedEmployeeIds = getSelectedEmployeeSet(currentTab);
-    employees = data.employees.filter(e => selectedEmployeeIds.has(e.id));
+    const excludedNames = LEAVE_LEDGER_EXCLUDE_BY_TAB[currentTab] || [];
+    employees = data.employees.filter(e => selectedEmployeeIds.has(e.id) && !excludedNames.includes(e.name));
   }
 
   if(employees.length === 0){
