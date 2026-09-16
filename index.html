@@ -558,6 +558,22 @@
 </div>
 
 <!-- ===== 이바구플랫폼: 정기 회의록 모달 ===== -->
+<div class="overlay" id="overlay-instructorCareerCert">
+  <div class="modal">
+    <h2 style="margin:0 0 6px;">📜 강사 경력증명서 발급</h2>
+    <div class="hint" style="margin-bottom:14px;">강사: <b id="icc_name"></b> (기존 "경력증명서" 양식 그대로 발급돼요)</div>
+    <div class="field"><label>담당업무</label><input id="icc_duty" placeholder="예: 코딩 강사"></div>
+    <div class="field"><label>근무 시작일</label><input type="date" id="icc_hireDate" min="1900-01-01" max="2099-12-31"></div>
+    <div class="field"><label>근무 종료일 (선택, 비우면 "현재까지"로 표시)</label><input type="date" id="icc_endDate" min="1900-01-01" max="2099-12-31"></div>
+    <div class="field"><label>발급일자</label><input type="date" id="icc_issueDate" min="1900-01-01" max="2099-12-31"></div>
+    <div class="field"><label>내용 (선택)</label><textarea id="icc_content" placeholder="예: 초등학생 대상 코딩 교육 및 메이커 교육 프로그램 진행"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeModal('instructorCareerCert')">취소</button>
+      <button class="btn" onclick="submitInstructorCareerCert()">저장하고 발급</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="overlay-meetingMinutes">
   <div class="modal" style="max-width:680px;">
     <h2 id="modalTitle-meetingMinutes">정기 회의록 작성</h2>
@@ -2884,7 +2900,7 @@ function fixEmployItem(item){
   return { employeeId:'', name:'', rrn:'', address:'', position:'', hireDate:'', endDate:'', purpose:'재직증명', issueDate:'', ...item };
 }
 function fixCareerItem(item){
-  return { employeeId:'', name:'', rrn:'', address:'', position:'', hireDate:'', endDate:'', duty:'', issueDate:'', ...item };
+  return { employeeId:'', name:'', rrn:'', address:'', position:'', hireDate:'', endDate:'', duty:'', issueDate:'', isInstructor:false, instructorId:'', content:'', ...item };
 }
 function fixRuleItem(item){
   return { title:'', category:'', content:'', ...item };
@@ -3661,6 +3677,7 @@ function careerCertificateStyles(){
 
 function careerCertificateBodyHTML(item, company, sealImg){
   const periodText = calcCareerPeriodText(item.hireDate, item.endDate);
+  const isInstructor = !!item.isInstructor;
   return `
   <div class="career-frame">
     <h1>경 력 증 명 서</h1>
@@ -3669,8 +3686,15 @@ function careerCertificateBodyHTML(item, company, sealImg){
       <tr><td class="k-label">주&nbsp;&nbsp;&nbsp;소</td><td class="k-value" colspan="3">${escapeHtml(item.address||'')}</td></tr>
       <tr><td class="k-label">소&nbsp;&nbsp;&nbsp;속</td><td class="k-value">${escapeHtml(company.name||'')}</td><td class="k-label">직&nbsp;&nbsp;&nbsp;책</td><td class="k-value">${escapeHtml(item.position||'')}</td></tr>
       <tr><td class="k-label">사업장 주소</td><td class="k-value" colspan="3">${escapeHtml(company.address||'')}</td></tr>
+      ${isInstructor ? `
+      <tr><td class="k-label">전화번호</td><td class="k-value">${escapeHtml(company.phone||'')}</td><td class="k-label">과&nbsp;&nbsp;&nbsp;목</td><td class="k-value">${escapeHtml(item.duty||'')}</td></tr>
+      <tr><td class="k-label">담당업무</td><td class="k-value" colspan="3">해운대메이커교육체험센터 ${escapeHtml(item.duty||'')} 강사</td></tr>
+      <tr><td class="k-label">강의기간</td><td class="k-value" colspan="3">${periodText}</td></tr>
+      ${item.content ? `<tr><td class="k-label">내&nbsp;&nbsp;&nbsp;용</td><td class="k-value" colspan="3">${escapeHtml(item.content)}</td></tr>` : ''}
+      ` : `
       <tr><td class="k-label">전화번호</td><td class="k-value">${escapeHtml(company.phone||'')}</td><td class="k-label">담당업무</td><td class="k-value">${escapeHtml(item.duty||'')}</td></tr>
       <tr><td class="k-label">재직기간</td><td class="k-value" colspan="3">${periodText}</td></tr>
+      `}
     </table>
 
     <div class="stmt">위 사실이 틀림없음을 증명합니다.</div>
@@ -4117,6 +4141,49 @@ function collectCandidatesFromForm(){
     faceScore: calcFaceScore(c),
     finalScore: calcFinalScore(c)
   }));
+}
+
+// 강사 경력증명서 - "공문 작성"과 같은 양식을 그대로 재사용, 강사 정보로 미리 채워줌
+// 강사 경력증명서 - 기존 "경력증명서"(표 형식) 출력을 그대로 재사용
+let instructorCareerCertTarget = null;
+
+function openInstructorCareerCert(instructor){
+  instructorCareerCertTarget = instructor;
+  document.getElementById('icc_name').textContent = instructor.name;
+  document.getElementById('icc_duty').value = instructor.subject || '';
+  document.getElementById('icc_hireDate').value = '';
+  document.getElementById('icc_endDate').value = '';
+  document.getElementById('icc_issueDate').value = new Date().toISOString().slice(0,10);
+  document.getElementById('icc_content').value = '';
+  document.getElementById('overlay-instructorCareerCert').classList.add('open');
+}
+
+async function submitInstructorCareerCert(){
+  const instructor = instructorCareerCertTarget;
+  if(!instructor) return;
+  const hireDate = document.getElementById('icc_hireDate').value;
+  if(!hireDate){ alert('근무 시작일을 입력해주세요.'); return; }
+  const item = {
+    id: 'cr-'+Date.now(),
+    isInstructor: true,
+    instructorId: instructor.id,
+    name: instructor.name,
+    rrn: instructor.rrn,
+    address: instructor.address,
+    position: instructor.position || '강사',
+    hireDate,
+    endDate: document.getElementById('icc_endDate').value,
+    duty: document.getElementById('icc_duty').value.trim(),
+    content: document.getElementById('icc_content').value.trim(),
+    issueDate: document.getElementById('icc_issueDate').value || new Date().toISOString().slice(0,10),
+    updated: Date.now()
+  };
+  data.career.push(item);
+  cacheLocal('career');
+  await saveItemToFirestore('career', item);
+  closeModal('instructorCareerCert');
+  render();
+  printCareerCertificate(item);
 }
 
 async function saveOfficial(){
@@ -8314,7 +8381,7 @@ function render(){
         <div class="notes">${calcCareerPeriodText(d.hireDate, d.endDate)}</div>
         <div class="card-actions">
           <button class="icon-btn" onclick='printCareerCertificate(${JSON.stringify(d).replace(/'/g,"&#39;")})'>🖨 재발급/인쇄</button>
-          ${!isRestricted() ? `<button class="icon-btn" onclick='openModal(${JSON.stringify(d).replace(/'/g,"&#39;")})'>수정</button>
+          ${!isRestricted() ? `${!d.isInstructor ? `<button class="icon-btn" onclick='openModal(${JSON.stringify(d).replace(/'/g,"&#39;")})'>수정</button>` : ''}
           <button class="icon-btn del" onclick="deleteItem('career','${d.id}')">삭제</button>` : ''}
         </div>
       </div>`).join('') + '</div>';
@@ -8495,6 +8562,7 @@ function render(){
         <div class="meta">${escapeHtml(d.affiliation || '-')} ${d.position ? '· '+escapeHtml(d.position) : ''}</div>
         <div class="notes">${escapeHtml(d.contact || '-')}${d.hasSeal ? ' · 🔖 도장 등록됨' : ''}</div>
         <div class="card-actions">
+          <button class="icon-btn" onclick='openInstructorCareerCert(${JSON.stringify(d).replace(/'/g,"&#39;")})'>📜 경력증명서</button>
           ${!isRestricted() ? `<button class="icon-btn" onclick='openModal(${JSON.stringify(d).replace(/'/g,"&#39;")})'>수정</button>
           <button class="icon-btn del" onclick="deleteItem('instructors','${d.id}')">삭제</button>` : ''}
         </div>
