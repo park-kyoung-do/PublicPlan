@@ -206,6 +206,7 @@
     <button class="tab-btn" data-cat="ibagu_cat" onclick="setCategory('ibagu_cat')">🏙 이바구플랫폼</button>
     <button class="tab-btn" data-cat="hame_cat" onclick="setCategory('hame_cat')">🛠 해메체</button>
     <button class="tab-btn" data-cat="project_cat" onclick="setCategory('project_cat')">📁 프로젝트</button>
+    <button class="tab-btn" data-cat="bote_cat" onclick="setCategory('bote_cat')">💵 보탬e</button>
   </div>
   <div class="tabs" id="tabsBar" style="border-top:1px solid rgba(247,244,236,0.12);">
     <button class="tab-btn active" data-tab="contract" data-cat="docs_cat" onclick="setTab('contract')">📄 계약서</button>
@@ -231,6 +232,12 @@
     <button class="tab-btn" data-tab="instructors" data-cat="hame_cat" onclick="setTab('instructors')">👨‍🏫 강사 관리</button>
     <button class="tab-btn" data-tab="budget" data-cat="hame_cat" onclick="setTab('budget')">💰 예산 정리</button>
     <button class="tab-btn" data-tab="unitcost" data-cat="project_cat" onclick="setTab('unitcost')">🗂 프로젝트 관리</button>
+    <button class="tab-btn" data-tab="bizProjects" data-cat="bote_cat" onclick="setTab('bizProjects')">🏢 사업개요</button>
+    <button class="tab-btn" data-tab="expenseChecklist" data-cat="bote_cat" onclick="setTab('expenseChecklist')">✅ 체크리스트</button>
+    <button class="tab-btn" data-tab="expenseProposals" data-cat="bote_cat" onclick="setTab('expenseProposals')">📝 품의서</button>
+    <button class="tab-btn" data-tab="expenseResolutions" data-cat="bote_cat" onclick="setTab('expenseResolutions')">💵 지출결의서</button>
+    <button class="tab-btn" data-tab="serviceContracts" data-cat="bote_cat" onclick="setTab('serviceContracts')">📜 계약서</button>
+    <button class="tab-btn" data-tab="vendors" data-cat="bote_cat" onclick="setTab('vendors')">🏭 업체 리스트</button>
     <button class="tab-btn" data-tab="buildings" data-cat="ibagu_cat" onclick="setTab('buildings')">🏢 건물 관리</button>
     <button class="tab-btn" data-tab="tenants" data-cat="ibagu_cat" onclick="setTab('tenants')">🧑 입주자 관리</button>
   </div>
@@ -570,6 +577,236 @@
     <div class="modal-actions">
       <button class="btn secondary" onclick="closeModal('instructorCareerCert')">취소</button>
       <button class="btn" onclick="submitInstructorCareerCert()">저장하고 발급</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 보탬e: 품의서 모달 ===== -->
+<!-- ===== 보탬e: 사업 모달 ===== -->
+<!-- ===== 보탬e: 서비스 계약서 모달 ===== -->
+<div class="overlay" id="overlay-serviceContracts">
+  <div class="modal" style="max-width:680px;">
+    <h2 id="modalTitle-serviceContracts">계약서 작성</h2>
+    <input type="hidden" id="sc_editId">
+
+    <div class="field"><label>연결된 사업 (선택, 예산 대비 지출 집계에 사용됨)</label>
+      <select id="sc_bizProjectId"></select>
+    </div>
+    <div class="field"><label>연결된 품의서 (선택, 대금지급 내역이 품의서 항목과 동일하게 채워짐)</label>
+      <select id="sc_proposalId" onchange="loadProposalIntoContract()"></select>
+    </div>
+    <div class="field"><label>계약서 제목</label><input id="sc_title" placeholder="예: 이바구플랫폼 간판 및 게시판 제작 계약서"></div>
+    <div class="field"><label>제1조 목적 (제공하는 서비스 설명)</label><input id="sc_purpose" placeholder="예: 이바구플랫폼 간판 및 게시판 제작에 필요한 서비스"></div>
+    <div class="field"><label>제2조① 운영목적</label><input id="sc_operatingPurpose" placeholder="예: 이바구플랫폼 간판 및 게시판 제작"></div>
+    <div class="field" style="display:flex; gap:8px;">
+      <div style="flex:1;"><label>기간 시작</label><input type="date" id="sc_periodStart" min="1900-01-01" max="2099-12-31"></div>
+      <div style="flex:1;"><label>기간 종료</label><input type="date" id="sc_periodEnd" min="1900-01-01" max="2099-12-31"></div>
+    </div>
+    <div class="field">
+      <label>제2조④ 내용 (한 줄에 하나씩)</label>
+      <textarea id="sc_content" placeholder="이바구플랫폼 간판 및 게시판&#10;(아래승강장 리플렛 거치대 설치물, 계단 돌출 간판, 팝업스페이스 솔벤 간판)"></textarea>
+    </div>
+
+    <div class="field"><label>업체 리스트에서 선택 (선택, 고르면 아래 정보가 자동으로 채워져요)</label>
+      <select id="sc_vendorId" onchange="loadVendorIntoContract()">
+        <option value="">-- 직접 입력 --</option>
+      </select>
+    </div>
+    <div class="field"><label>을(상대방) 상호</label><input id="sc_counterpartyName" placeholder="예: 금강"></div>
+    <div class="field"><label>을 주소</label><input id="sc_counterpartyAddress" placeholder="예: 부산광역시 사하구 다산로106번길 71"></div>
+    <div class="field"><label>을 사업자등록번호</label><input id="sc_counterpartyBizNumber" placeholder="예: 603-01-31954"></div>
+    <div class="field"><label>을 대표자명</label><input id="sc_counterpartyRepName" placeholder="예: 신범호"></div>
+
+    <div class="field">
+      <label>제3조③ 대금지급 내역</label>
+      <div id="sc_paymentBody" style="display:flex; flex-direction:column; gap:8px; margin-bottom:8px;"></div>
+      <button type="button" class="btn secondary" onclick="addPaymentItemRow()">+ 항목 추가</button>
+      <div class="hint" id="sc_totalPreview" style="margin-top:8px;"></div>
+    </div>
+
+    <div class="hint">제4조 협약기간 : 후속 협약 체결일로부터 <span id="sc_agreementYearDisplay"></span>년 12월 31일까지 (자동 고정)</div>
+    <div class="field"><label>계약 체결일</label><input type="date" id="sc_contractDate" min="1900-01-01" max="2099-12-31"></div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeModal('serviceContracts')">취소</button>
+      <button class="btn" id="sc_saveBtn" onclick="saveServiceContract()">저장하고 발급</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 보탬e: 업체 리스트 모달 ===== -->
+<div class="overlay" id="overlay-vendors">
+  <div class="modal" style="max-width:640px;">
+    <h2 id="modalTitle-vendors">업체 작성</h2>
+    <input type="hidden" id="vd_editId">
+
+    <div class="field"><label>상호명</label><input id="vd_name" placeholder="예: 금강"></div>
+    <div class="field"><label>사업자등록번호</label><input id="vd_bizNumber" placeholder="예: 603-01-31954"></div>
+    <div class="field"><label>대표자명</label><input id="vd_repName" placeholder="예: 신범호"></div>
+    <div class="field"><label>주소 (선택)</label><input id="vd_address" placeholder="예: 부산광역시 사하구 다산로106번길 71"></div>
+    <div class="field"><label>연락처 (선택)</label><input id="vd_contact" placeholder="예: 010-0000-0000"></div>
+
+    <div class="field">
+      <label>사업자등록증 파일</label>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <input type="file" id="vd_bizCertFile" style="flex:1;">
+        <button type="button" class="icon-btn del" onclick="clearFileInput('vd_bizCertFile')">✕ 선택취소</button>
+      </div>
+      <div class="filerow" id="vd_bizCert_current"></div>
+    </div>
+    <div class="field">
+      <label>통장사본 파일</label>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <input type="file" id="vd_bankCopyFile" style="flex:1;">
+        <button type="button" class="icon-btn del" onclick="clearFileInput('vd_bankCopyFile')">✕ 선택취소</button>
+      </div>
+      <div class="filerow" id="vd_bankCopy_current"></div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeModal('vendors')">취소</button>
+      <button class="btn" id="vd_saveBtn" onclick="saveVendor()">저장</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay-bizProjects">
+  <div class="modal" style="max-width:640px;">
+    <h2 id="modalTitle-bizProjects">사업 작성</h2>
+    <input type="hidden" id="bp_editId">
+
+    <div class="field"><label>사업명</label><input id="bp_name" placeholder="예: 2026 도심형 청년주거복합공간조성사업"></div>
+    <div class="field" style="display:flex; gap:8px;">
+      <div style="flex:1;"><label>사업기간 시작</label><input type="date" id="bp_periodStart" min="1900-01-01" max="2099-12-31"></div>
+      <div style="flex:1;"><label>사업기간 종료</label><input type="date" id="bp_periodEnd" min="1900-01-01" max="2099-12-31"></div>
+    </div>
+
+    <div class="field">
+      <label>비목별 예산</label>
+      <div id="bp_budgetBody" style="display:flex; flex-direction:column; gap:8px; margin-bottom:8px;"></div>
+      <button type="button" class="btn secondary" onclick="addBudgetItemRow()">+ 비목 추가</button>
+      <div class="hint" id="bp_totalPreview" style="margin-top:8px;"></div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeModal('bizProjects')">취소</button>
+      <button class="btn" id="bp_saveBtn" onclick="saveBizProject()">저장</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay-expenseProposals">
+  <div class="modal" style="max-width:680px;">
+    <h2 id="modalTitle-expenseProposals">지출품의서 작성</h2>
+    <input type="hidden" id="ep_editId">
+
+    <div class="field"><label>재원구분</label>
+      <select id="ep_fundSource">
+        <option value="보조금">보조금</option>
+        <option value="자부담">자부담</option>
+      </select>
+    </div>
+    <div class="field"><label>연결된 사업 (선택, 예산 대비 지출 집계에 사용됨)</label>
+      <select id="ep_bizProjectId" onchange="loadBizProjectIntoProposal()"></select>
+    </div>
+    <div class="field"><label>사업명</label><input id="ep_projectName" placeholder="예: 2025년 도심형 청년 창업주거 복합공간 조성사업"></div>
+    <div class="field"><label>합계 설명 (산출내역 표의 "합계" 행에 들어갈 요약)</label><input id="ep_totalDescription" placeholder="예: 전문인력 11월 인건비"></div>
+    <div class="field" style="display:flex; gap:8px;">
+      <div style="flex:1;"><label>사업기간 시작</label><input type="date" id="ep_periodStart" min="1900-01-01" max="2099-12-31"></div>
+      <div style="flex:1;"><label>사업기간 종료</label><input type="date" id="ep_periodEnd" min="1900-01-01" max="2099-12-31"></div>
+    </div>
+
+    <div class="field">
+      <label>산출 내역</label>
+      <div id="ep_itemsBody" style="display:flex; flex-direction:column; gap:8px; margin-bottom:8px;"></div>
+      <button type="button" class="btn secondary" onclick="addExpenseItemRow('ep')">+ 항목 추가</button>
+      <div class="hint" id="ep_totalPreview" style="margin-top:8px;"></div>
+    </div>
+
+    <div class="field"><label>첨부 (선택, 메모)</label><input id="ep_attachmentNote" placeholder="예: 출근부 첨부"></div>
+    <div class="field">
+      <label>첨부파일 (선택)</label>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <input type="file" id="ep_attachmentFile" style="flex:1;">
+        <button type="button" class="icon-btn del" onclick="clearFileInput('ep_attachmentFile')">✕ 선택취소</button>
+      </div>
+      <div class="filerow" id="ep_attachment_current"></div>
+    </div>
+    <div class="field"><label>담당자</label>
+      <select id="ep_managerId"></select>
+    </div>
+    <div class="hint">사내이사 : 이정우 (고정)</div>
+    <div class="field"><label>발급일자</label><input type="date" id="ep_issueDate" min="1900-01-01" max="2099-12-31"></div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeModal('expenseProposals')">취소</button>
+      <button class="btn" id="ep_saveBtn" onclick="saveExpenseProposal()">저장하고 발급</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 보탬e: 지출결의서 모달 ===== -->
+<div class="overlay" id="overlay-expenseResolutions">
+  <div class="modal" style="max-width:680px;">
+    <h2 id="modalTitle-expenseResolutions">지출결의서 작성</h2>
+    <input type="hidden" id="er_editId">
+
+    <div class="field">
+      <label>연결된 품의서 (선택)</label>
+      <select id="er_proposalId" onchange="loadProposalIntoResolution()">
+        <option value="">-- 선택 안 함 --</option>
+      </select>
+    </div>
+    <div class="field"><label>연결된 사업 (선택, 예산 대비 지출 집계에 사용됨)</label>
+      <select id="er_bizProjectId"></select>
+    </div>
+
+    <div class="field"><label>문서번호 (선택, 비우면 자동 생성)</label><input id="er_docNo" placeholder="예: 2025-011"></div>
+    <div class="field"><label>재원구분</label>
+      <select id="er_fundSource">
+        <option value="보조금">보조금</option>
+        <option value="자부담">자부담</option>
+      </select>
+    </div>
+    <div class="field" style="display:flex; gap:8px;">
+      <div style="flex:1;"><label>발의 및 편입행위일</label><input type="date" id="er_resolutionDate" min="1900-01-01" max="2099-12-31"></div>
+      <div style="flex:1;"><label>지출부기재일</label><input type="date" id="er_disbursementDate" min="1900-01-01" max="2099-12-31"></div>
+    </div>
+    <div class="field"><label>세부사업</label><input id="er_subProject" placeholder="예: 11월급여_박경도"></div>
+    <div class="field"><label>이름 (카드/목록에 표시될 이름, 예: 전문인력 11월 인건비)</label><input id="er_totalDescription" placeholder="예: 전문인력 11월 인건비"></div>
+
+    <div class="field">
+      <label>지출 내역</label>
+      <div id="er_itemsBody" style="display:flex; flex-direction:column; gap:8px; margin-bottom:8px;"></div>
+      <button type="button" class="btn secondary" onclick="addExpenseItemRow('er')">+ 항목 추가</button>
+      <div class="hint" id="er_totalPreview" style="margin-top:8px;"></div>
+    </div>
+
+    <div class="hint">채주 정보 : 부산광역시 동구 영초길191번길 10-2 · 공공플랜 · 이유한 (고정)</div>
+    <div class="field"><label>지급방법</label><input id="er_paymentMethod" placeholder="예: 계좌이체"></div>
+    <div class="field">
+      <label>증빙자료 (항목별로 첨부파일 추가 가능, 사진도 됨)</label>
+      <div id="er_evidenceBody" style="display:flex; flex-direction:column; gap:8px; margin-bottom:8px;"></div>
+      <button type="button" class="btn secondary" onclick="addEvidenceRow()">+ 증빙자료 추가</button>
+    </div>
+    <div class="field">
+      <label>증빙 사진 (여러 장 선택 가능, 자동으로 용량이 줄어들어요, 인쇄 시 한 페이지에 4장씩)</label>
+      <input type="file" id="er_evidencePhotoFiles" accept="image/*" multiple onchange="addEvidencePhotos(this)" style="margin-bottom:8px;">
+      <div id="er_evidencePhotoBody" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
+    </div>
+    <div class="field">
+      <label>첨부파일 (선택)</label>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <input type="file" id="er_attachmentFile" style="flex:1;">
+        <button type="button" class="icon-btn del" onclick="clearFileInput('er_attachmentFile')">✕ 선택취소</button>
+      </div>
+      <div class="filerow" id="er_attachment_current"></div>
+    </div>
+    <div class="field"><label>담당자</label>
+      <select id="er_managerId"></select>
+    </div>
+    <div class="field"><label>발급일자</label><input type="date" id="er_issueDate" min="1900-01-01" max="2099-12-31"></div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeModal('expenseResolutions')">취소</button>
+      <button class="btn" id="er_saveBtn" onclick="saveExpenseResolution()">저장하고 발급</button>
     </div>
   </div>
 </div>
@@ -1428,6 +1665,17 @@
             <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="re_tab" value="unitcost" style="width:auto;"> 🗂 프로젝트 관리</label>
           </div>
         </div>
+        <div>
+          <div style="font-size:12px; font-weight:700; color:var(--gold-deep); margin-bottom:6px;">💵 보탬e</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px 12px;">
+            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="re_tab" value="bizProjects" style="width:auto;"> 🏢 사업</label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="re_tab" value="serviceContracts" style="width:auto;"> 📜 계약서</label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="re_tab" value="expenseChecklist" style="width:auto;"> ✅ 체크리스트</label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="re_tab" value="vendors" style="width:auto;"> 🏭 업체 리스트</label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="re_tab" value="expenseProposals" style="width:auto;"> 📝 품의서</label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13.5px;"><input type="checkbox" class="re_tab" value="expenseResolutions" style="width:auto;"> 💵 지출결의서</label>
+          </div>
+        </div>
       </div>
     </div>
     <div class="modal-actions">
@@ -1438,8 +1686,8 @@
 </div>
 
 <script>
-const KEYS = { contract:'gongplan_contracts_v1', docs:'gongplan_docs_v1', cert:'gongplan_certs_v1', employ:'gongplan_employ_v1', employees:'gongplan_employees_v1', official:'gongplan_official_v1', buildings:'gongplan_buildings_v1', lease:'gongplan_lease_v1', renewal:'gongplan_renewal_v1', tenants:'gongplan_tenants_v1', subdelegation:'gongplan_subdelegation_v1', movein:'gongplan_movein_v1', instructors:'gongplan_instructors_v1', receipts:'gongplan_receipts_v1', empReceipts:'gongplan_empreceipts_v1', salaryReceipts:'gongplan_salaryreceipts_v1', career:'gongplan_career_v1', rules:'gongplan_rules_v1', budget:'gongplan_budget_v1', budgetAllocations:'gongplan_budgetalloc_v1', unitCostProjects:'gongplan_ucproj_v1', unitCostPurchases:'gongplan_ucpurch_v1', unitCostWorktime:'gongplan_ucwork_v1', notionConfirmations:'gongplan_notionconfirm_v1', hiddenChecklistTasks:'gongplan_hiddentasks_v1', reviewNotices:'gongplan_reviewnotices_v1', meetingMinutes:'gongplan_meetingminutes_v1' };
-let data = { contract:[], docs:[], cert:[], employ:[], employees:[], official:[], buildings:[], lease:[], renewal:[], tenants:[], subdelegation:[], movein:[], instructors:[], receipts:[], empReceipts:[], salaryReceipts:[], career:[], rules:[], budget:[], budgetAllocations:[], unitCostProjects:[], unitCostPurchases:[], unitCostWorktime:[], notionConfirmations:[], hiddenChecklistTasks:[], reviewNotices:[], meetingMinutes:[], settings:{ viewerMode:false, roles:[], allowedTabs:['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career','rules','budget','unitcost','reviewNotices','meetingMinutes'], company:{ name:'', ceo:'', address:'', bizNumber:'', issuerName:'', issuerPosition:'', hasSeal:false, hasLogo:false, hasLogo2:false } } };
+const KEYS = { contract:'gongplan_contracts_v1', docs:'gongplan_docs_v1', cert:'gongplan_certs_v1', employ:'gongplan_employ_v1', employees:'gongplan_employees_v1', official:'gongplan_official_v1', buildings:'gongplan_buildings_v1', lease:'gongplan_lease_v1', renewal:'gongplan_renewal_v1', tenants:'gongplan_tenants_v1', subdelegation:'gongplan_subdelegation_v1', movein:'gongplan_movein_v1', instructors:'gongplan_instructors_v1', receipts:'gongplan_receipts_v1', empReceipts:'gongplan_empreceipts_v1', salaryReceipts:'gongplan_salaryreceipts_v1', career:'gongplan_career_v1', rules:'gongplan_rules_v1', budget:'gongplan_budget_v1', budgetAllocations:'gongplan_budgetalloc_v1', unitCostProjects:'gongplan_ucproj_v1', unitCostPurchases:'gongplan_ucpurch_v1', unitCostWorktime:'gongplan_ucwork_v1', notionConfirmations:'gongplan_notionconfirm_v1', hiddenChecklistTasks:'gongplan_hiddentasks_v1', reviewNotices:'gongplan_reviewnotices_v1', meetingMinutes:'gongplan_meetingminutes_v1', expenseProposals:'gongplan_expenseproposals_v1', expenseResolutions:'gongplan_expenseresolutions_v1', bizProjects:'gongplan_bizprojects_v1', serviceContracts:'gongplan_servicecontracts_v1', vendors:'gongplan_vendors_v1' };
+let data = { contract:[], docs:[], cert:[], employ:[], employees:[], official:[], buildings:[], lease:[], renewal:[], tenants:[], subdelegation:[], movein:[], instructors:[], receipts:[], empReceipts:[], salaryReceipts:[], career:[], rules:[], budget:[], budgetAllocations:[], unitCostProjects:[], unitCostPurchases:[], unitCostWorktime:[], notionConfirmations:[], hiddenChecklistTasks:[], reviewNotices:[], meetingMinutes:[], expenseProposals:[], expenseResolutions:[], bizProjects:[], serviceContracts:[], vendors:[], settings:{ viewerMode:false, roles:[], allowedTabs:['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career','rules','budget','unitcost','reviewNotices','meetingMinutes','expenseProposals','expenseResolutions','bizProjects','serviceContracts','expenseChecklist','vendors'], company:{ name:'', ceo:'', address:'', bizNumber:'', issuerName:'', issuerPosition:'', hasSeal:false, hasLogo:false, hasLogo2:false } } };
 let currentTab = 'contract';
 let currentCategory = 'docs_cat';
 const TAB_CATEGORY_MAP = {
@@ -1447,7 +1695,7 @@ const TAB_CATEGORY_MAP = {
   employ:'issue_cat', official:'issue_cat', career:'issue_cat',
   leave:'hr_cat', comp:'hr_cat', workGP:'hr_cat', workHM:'hr_cat', employees:'hr_cat', rules:'hr_cat',
   movein:'ibagu_cat', lease:'ibagu_cat', renewal:'ibagu_cat', buildings:'ibagu_cat', tenants:'ibagu_cat', subdelegation:'ibagu_cat', reviewNotices:'ibagu_cat', meetingMinutes:'ibagu_cat',
-  receipts:'hame_cat', salaryReceipts:'hame_cat', instructors:'hame_cat', budget:'hame_cat', unitcost:'project_cat'
+  receipts:'hame_cat', salaryReceipts:'hame_cat', instructors:'hame_cat', budget:'hame_cat', unitcost:'project_cat', expenseProposals:'bote_cat', expenseResolutions:'bote_cat', bizProjects:'bote_cat', serviceContracts:'bote_cat', expenseChecklist:'bote_cat', vendors:'bote_cat'
 };
 
 function setCategory(cat){
@@ -1456,6 +1704,7 @@ function setCategory(cat){
   if(firstTab) setTab(firstTab);
 }
 let activeChip = '전체';
+let checklistProjectFilter = '';
 let sessionRole = null; // null | 'viewer' | 'admin'
 let leaveEvents = [];
 let leaveLoaded = false;
@@ -2501,7 +2750,7 @@ async function saveSettings(){
 function applyRestrictions(){
   const loggedIn = sessionRole !== null;
   const restricted = isRestricted();
-  const allowed = restricted ? (currentRoleAllowedTabs || []) : ['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career','rules','budget','unitcost','reviewNotices','meetingMinutes'];
+  const allowed = restricted ? (currentRoleAllowedTabs || []) : ['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career','rules','budget','unitcost','reviewNotices','meetingMinutes','expenseProposals','expenseResolutions','bizProjects','serviceContracts','expenseChecklist','vendors'];
 
   // 세부탭: 권한 + 현재 카테고리 둘 다 만족해야 보임
   document.querySelectorAll('#tabsBar .tab-btn').forEach(btn=>{
@@ -2572,7 +2821,7 @@ function ensureFirebaseAuth(){
     });
   });
 }
-const COLLECTIONS = { contract:'contracts', docs:'docs', cert:'certs', employ:'employment_certificates', employees:'employees', official:'official_docs', buildings:'buildings', lease:'lease_contracts', renewal:'renewal_requests', tenants:'tenants', subdelegation:'subdelegation_requests', movein:'movein_contracts', instructors:'instructors', receipts:'instructor_receipts', empReceipts:'employee_receipts', salaryReceipts:'instructor_salary_receipts', career:'career_certificates', rules:'company_rules', budget:'hamec_budget', budgetAllocations:'hamec_budget_allocations', unitCostProjects:'hamec_unitcost_projects', unitCostPurchases:'hamec_unitcost_purchases', unitCostWorktime:'hamec_unitcost_worktime', notionConfirmations:'gongplan_notion_confirmations', hiddenChecklistTasks:'gongplan_hidden_tasks', reviewNotices:'review_notices', meetingMinutes:'meeting_minutes' };
+const COLLECTIONS = { contract:'contracts', docs:'docs', cert:'certs', employ:'employment_certificates', employees:'employees', official:'official_docs', buildings:'buildings', lease:'lease_contracts', renewal:'renewal_requests', tenants:'tenants', subdelegation:'subdelegation_requests', movein:'movein_contracts', instructors:'instructors', receipts:'instructor_receipts', empReceipts:'employee_receipts', salaryReceipts:'instructor_salary_receipts', career:'career_certificates', rules:'company_rules', budget:'hamec_budget', budgetAllocations:'hamec_budget_allocations', unitCostProjects:'hamec_unitcost_projects', unitCostPurchases:'hamec_unitcost_purchases', unitCostWorktime:'hamec_unitcost_worktime', notionConfirmations:'gongplan_notion_confirmations', hiddenChecklistTasks:'gongplan_hidden_tasks', reviewNotices:'review_notices', meetingMinutes:'meeting_minutes', expenseProposals:'expense_proposals', expenseResolutions:'expense_resolutions', bizProjects:'biz_projects', serviceContracts:'service_contracts', vendors:'vendors' };
 
 function updateSyncStatus(msg){
   document.getElementById('syncStatus').textContent = msg || '';
@@ -2736,6 +2985,36 @@ async function initFirebaseSync(){
     render();
   }, err => { console.error(err); updateSyncStatus('🔴 정기 회의록 동기화 실패: ' + err.message); });
 
+  db.collection('expense_proposals').onSnapshot(snap => {
+    data.expenseProposals = snap.docs.map(d => fixExpenseProposalItem(d.data()));
+    localStorage.setItem(KEYS.expenseProposals, JSON.stringify(data.expenseProposals));
+    render();
+  }, err => { console.error(err); updateSyncStatus('🔴 품의서 동기화 실패: ' + err.message); });
+
+  db.collection('expense_resolutions').onSnapshot(snap => {
+    data.expenseResolutions = snap.docs.map(d => fixExpenseResolutionItem(d.data()));
+    localStorage.setItem(KEYS.expenseResolutions, JSON.stringify(data.expenseResolutions));
+    render();
+  }, err => { console.error(err); updateSyncStatus('🔴 지출결의서 동기화 실패: ' + err.message); });
+
+  db.collection('biz_projects').onSnapshot(snap => {
+    data.bizProjects = snap.docs.map(d => fixBizProjectItem(d.data()));
+    localStorage.setItem(KEYS.bizProjects, JSON.stringify(data.bizProjects));
+    render();
+  }, err => { console.error(err); updateSyncStatus('🔴 사업 동기화 실패: ' + err.message); });
+
+  db.collection('service_contracts').onSnapshot(snap => {
+    data.serviceContracts = snap.docs.map(d => fixServiceContractItem(d.data()));
+    localStorage.setItem(KEYS.serviceContracts, JSON.stringify(data.serviceContracts));
+    render();
+  }, err => { console.error(err); updateSyncStatus('🔴 계약서 동기화 실패: ' + err.message); });
+
+  db.collection('vendors').onSnapshot(snap => {
+    data.vendors = snap.docs.map(d => fixVendorItem(d.data()));
+    localStorage.setItem(KEYS.vendors, JSON.stringify(data.vendors));
+    render();
+  }, err => { console.error(err); updateSyncStatus('🔴 업체 리스트 동기화 실패: ' + err.message); });
+
   db.collection('employee_receipts').onSnapshot(snap => {
     data.empReceipts = snap.docs.map(d => fixEmpReceiptItem(d.data()));
     localStorage.setItem(KEYS.empReceipts, JSON.stringify(data.empReceipts));
@@ -2762,7 +3041,7 @@ async function initFirebaseSync(){
   db.collection('settings').doc('main').onSnapshot(snap => {
     if(snap.exists){
       data.settings = snap.data();
-      if(!Array.isArray(data.settings.allowedTabs)) data.settings.allowedTabs = ['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career','rules','budget','unitcost','reviewNotices','meetingMinutes'];
+      if(!Array.isArray(data.settings.allowedTabs)) data.settings.allowedTabs = ['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career','rules','budget','unitcost','reviewNotices','meetingMinutes','expenseProposals','expenseResolutions','bizProjects','serviceContracts','expenseChecklist','vendors'];
       if(!data.settings.company) data.settings.company = { name:'', ceo:'', address:'', bizNumber:'', issuerName:'', issuerPosition:'', hasSeal:false, hasLogo:false, hasLogo2:false };
     }
     applyRestrictions();
@@ -2937,6 +3216,25 @@ function fixReviewNoticeItem(item){
 function fixMeetingMinutesItem(item){
   return { title:'', writerOrg:'', writerName:'', meetingDate:'', meetingTime:'', location:'', agenda:'', contentSummary:'', resultSummary:'', attendeeIds:[], hasPhoto1:false, hasPhoto2:false, contact:'', ...item };
 }
+function fixExpenseProposalItem(item){
+  return { docNo:'', fundSource:'보조금', amount:0, projectName:'', totalDescription:'', projectPeriodStart:'', projectPeriodEnd:'', items:[], attachmentNote:'', attachmentFile:null, issueDate:'', managerId:'', directorId:'', orgName:'', accountantName:'', bizProjectId:'', ...item };
+}
+function fixExpenseResolutionItem(item){
+  return { proposalId:'', docNo:'', fundSource:'보조금', amount:0, resolutionDate:'', disbursementDate:'', subProject:'', totalDescription:'', items:[], payeeAddress:'', payeeCompany:'', payeeName:'', paymentMethod:'계좌이체', evidenceItems:[], evidencePhotos:[], attachmentFile:null, managerId:'', issueDate:'', orgName:'', accountantName:'', bizProjectId:'', ...item };
+}
+function fixBizProjectItem(item){
+  return { name:'', periodStart:'', periodEnd:'', budgetItems:[], updated:0, ...item };
+}
+function fixServiceContractItem(item){
+  return {
+    title:'', purpose:'', operatingPurpose:'', periodStart:'', periodEnd:'', content:'',
+    counterpartyName:'', counterpartyAddress:'', counterpartyBizNumber:'', counterpartyRepName:'',
+    paymentItems:[], agreementPeriodText:'', contractDate:'', bizProjectId:'', proposalId:'', vendorId:'', updated:0, ...item
+  };
+}
+function fixVendorItem(item){
+  return { name:'', bizNumber:'', repName:'', address:'', contact:'', hasBizCert:false, hasBankCopy:false, updated:0, ...item };
+}
 function fixOfficialItem(item){
   return { docNo:'', effectiveDate:'', recipient:'', via:'', title:'', body:'', subItems:'', attachments:'', contact:'', ...item };
 }
@@ -3010,7 +3308,7 @@ function fixEmployeeItem(item){
 }
 
 function migrateData(d){
-  if(!d) return { contract:[], docs:[], cert:[], employ:[], employees:[], official:[], buildings:[], lease:[], renewal:[], tenants:[], subdelegation:[], movein:[], instructors:[], receipts:[], empReceipts:[], salaryReceipts:[], career:[], rules:[], budget:[], budgetAllocations:[], unitCostProjects:[], unitCostPurchases:[], unitCostWorktime:[], notionConfirmations:[], hiddenChecklistTasks:[], reviewNotices:[], meetingMinutes:[] };
+  if(!d) return { contract:[], docs:[], cert:[], employ:[], employees:[], official:[], buildings:[], lease:[], renewal:[], tenants:[], subdelegation:[], movein:[], instructors:[], receipts:[], empReceipts:[], salaryReceipts:[], career:[], rules:[], budget:[], budgetAllocations:[], unitCostProjects:[], unitCostPurchases:[], unitCostWorktime:[], notionConfirmations:[], hiddenChecklistTasks:[], reviewNotices:[], meetingMinutes:[], expenseProposals:[], expenseResolutions:[], bizProjects:[], serviceContracts:[], vendors:[] };
   d.contract = (d.contract||[]).map(fixContractItem);
   d.docs = (d.docs || d.education || []).map(fixDocItem);
   delete d.education;
@@ -3039,10 +3337,15 @@ function migrateData(d){
   d.hiddenChecklistTasks = (d.hiddenChecklistTasks||[]).map(fixHiddenChecklistTaskItem);
   d.reviewNotices = (d.reviewNotices||[]).map(fixReviewNoticeItem);
   d.meetingMinutes = (d.meetingMinutes||[]).map(fixMeetingMinutesItem);
+  d.expenseProposals = (d.expenseProposals||[]).map(fixExpenseProposalItem);
+  d.expenseResolutions = (d.expenseResolutions||[]).map(fixExpenseResolutionItem);
+  d.bizProjects = (d.bizProjects||[]).map(fixBizProjectItem);
+  d.serviceContracts = (d.serviceContracts||[]).map(fixServiceContractItem);
+  d.vendors = (d.vendors||[]).map(fixVendorItem);
   if(!d.settings || typeof d.settings !== 'object'){
-    d.settings = { viewerMode:false, allowedTabs:['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career','rules','budget','unitcost','reviewNotices','meetingMinutes'], company:{ name:'', ceo:'', address:'', bizNumber:'', issuerName:'', issuerPosition:'', hasSeal:false, hasLogo:false, hasLogo2:false } };
+    d.settings = { viewerMode:false, allowedTabs:['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career','rules','budget','unitcost','reviewNotices','meetingMinutes','expenseProposals','expenseResolutions','bizProjects','serviceContracts','expenseChecklist','vendors'], company:{ name:'', ceo:'', address:'', bizNumber:'', issuerName:'', issuerPosition:'', hasSeal:false, hasLogo:false, hasLogo2:false } };
   }
-  if(!Array.isArray(d.settings.allowedTabs)) d.settings.allowedTabs = ['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career','rules','budget','unitcost','reviewNotices','meetingMinutes'];
+  if(!Array.isArray(d.settings.allowedTabs)) d.settings.allowedTabs = ['contract','docs','cert','employ','leave','comp','workGP','workHM','official','employees','buildings','lease','renewal','tenants','subdelegation','movein','instructors','receipts','salaryReceipts','career','rules','budget','unitcost','reviewNotices','meetingMinutes','expenseProposals','expenseResolutions','bizProjects','serviceContracts','expenseChecklist','vendors'];
   d.settings.allowedTabs = d.settings.allowedTabs.map(t => t==='education' ? 'docs' : t);
   if(!Array.isArray(d.settings.roles)) d.settings.roles = [];
   if(!d.settings.company) d.settings.company = { name:'', ceo:'', address:'', bizNumber:'', issuerName:'', issuerPosition:'', hasSeal:false, hasLogo:false, hasLogo2:false };
@@ -3154,6 +3457,7 @@ function handleAddClick(){
   if(currentTab==='employees'){ openEmployeeManager(); return; }
   if(currentTab==='salaryReceipts'){ openSalaryReceiptModal(); return; }
   if(currentTab==='unitcost'){ openUcProjectListModal(); return; }
+  if(currentTab==='expenseChecklist'){ alert('이 탭은 품의서 내용을 기반으로 자동 계산돼요. "품의서" 탭에서 새 품의서를 추가하면 자동으로 반영돼요.'); return; }
   openModal();
 }
 
@@ -3282,6 +3586,95 @@ function openModal(doc){
     document.getElementById('mm_photo2_current').innerHTML = (doc && doc.hasPhoto2) ? '등록된 사진 있음' : '등록된 사진 없음';
     renderAttendeesChecklist(doc ? doc.attendeeIds : []);
     document.getElementById('mm_contact').value = doc ? doc.contact : '';
+  } else if(tab==='vendors'){
+    document.getElementById('modalTitle-vendors').textContent = doc ? '업체 수정' : '업체 작성';
+    document.getElementById('vd_editId').value = doc ? doc.id : '';
+    document.getElementById('vd_name').value = doc ? doc.name : '';
+    document.getElementById('vd_bizNumber').value = doc ? doc.bizNumber : '';
+    document.getElementById('vd_repName').value = doc ? doc.repName : '';
+    document.getElementById('vd_address').value = doc ? doc.address : '';
+    document.getElementById('vd_contact').value = doc ? doc.contact : '';
+    document.getElementById('vd_bizCertFile').value = '';
+    document.getElementById('vd_bankCopyFile').value = '';
+    document.getElementById('vd_bizCert_current').innerHTML = (doc && doc.hasBizCert) ? `등록됨 <button type="button" onclick="removeVendorFile('${doc.id}','bizCert')" class="icon-btn del" style="margin-left:6px;">🗑 삭제</button> <a href="#" onclick="downloadFile('${doc.id}','bizCert'); return false;" style="margin-left:6px;">⬇ 다운로드</a>` : '등록된 파일 없음';
+    document.getElementById('vd_bankCopy_current').innerHTML = (doc && doc.hasBankCopy) ? `등록됨 <button type="button" onclick="removeVendorFile('${doc.id}','bankCopy')" class="icon-btn del" style="margin-left:6px;">🗑 삭제</button> <a href="#" onclick="downloadFile('${doc.id}','bankCopy'); return false;" style="margin-left:6px;">⬇ 다운로드</a>` : '등록된 파일 없음';
+  } else if(tab==='bizProjects'){
+    document.getElementById('modalTitle-bizProjects').textContent = doc ? '사업 수정' : '사업 작성';
+    document.getElementById('bp_editId').value = doc ? doc.id : '';
+    document.getElementById('bp_name').value = doc ? doc.name : '';
+    document.getElementById('bp_periodStart').value = doc ? doc.periodStart : '';
+    document.getElementById('bp_periodEnd').value = doc ? doc.periodEnd : '';
+    budgetItemsState = doc && doc.budgetItems ? JSON.parse(JSON.stringify(doc.budgetItems)) : [];
+    renderBudgetItemsRows();
+  } else if(tab==='serviceContracts'){
+    document.getElementById('modalTitle-serviceContracts').textContent = doc ? '계약서 수정' : '계약서 작성';
+    document.getElementById('sc_editId').value = doc ? doc.id : '';
+    populateBizProjectSelects();
+    document.getElementById('sc_bizProjectId').value = doc ? (doc.bizProjectId||'') : '';
+    populateContractProposalSelect();
+    document.getElementById('sc_proposalId').value = doc ? (doc.proposalId||'') : '';
+    populateContractVendorSelect();
+    document.getElementById('sc_vendorId').value = doc ? (doc.vendorId||'') : '';
+    document.getElementById('sc_title').value = doc ? doc.title : '';
+    document.getElementById('sc_purpose').value = doc ? doc.purpose : '';
+    document.getElementById('sc_operatingPurpose').value = doc ? doc.operatingPurpose : '';
+    document.getElementById('sc_periodStart').value = doc ? doc.periodStart : '';
+    document.getElementById('sc_periodEnd').value = doc ? doc.periodEnd : '';
+    document.getElementById('sc_content').value = doc ? doc.content : '';
+    document.getElementById('sc_counterpartyName').value = doc ? doc.counterpartyName : '';
+    document.getElementById('sc_counterpartyAddress').value = doc ? doc.counterpartyAddress : '';
+    document.getElementById('sc_counterpartyBizNumber').value = doc ? doc.counterpartyBizNumber : '';
+    document.getElementById('sc_counterpartyRepName').value = doc ? doc.counterpartyRepName : '';
+    paymentItemsState = doc && doc.paymentItems ? JSON.parse(JSON.stringify(doc.paymentItems)) : [];
+    renderPaymentItemsRows();
+    document.getElementById('sc_agreementYearDisplay').textContent = new Date().getFullYear();
+    document.getElementById('sc_contractDate').value = doc ? doc.contractDate : new Date().toISOString().slice(0,10);
+  } else if(tab==='expenseProposals'){
+    document.getElementById('modalTitle-expenseProposals').textContent = doc ? '지출품의서 수정' : '지출품의서 작성';
+    document.getElementById('ep_editId').value = doc ? doc.id : '';
+    document.getElementById('ep_fundSource').value = doc ? doc.fundSource : '보조금';
+    populateBizProjectSelects();
+    document.getElementById('ep_bizProjectId').value = doc ? (doc.bizProjectId||'') : '';
+    document.getElementById('ep_projectName').value = doc ? doc.projectName : '';
+    document.getElementById('ep_totalDescription').value = doc ? doc.totalDescription : '';
+    document.getElementById('ep_periodStart').value = doc ? doc.projectPeriodStart : '';
+    document.getElementById('ep_periodEnd').value = doc ? doc.projectPeriodEnd : '';
+    expenseItemsByPrefix.ep = doc && doc.items ? JSON.parse(JSON.stringify(doc.items)) : [];
+    populateManagerDirectorSelects();
+    renderExpenseItemsRows('ep');
+    document.getElementById('ep_attachmentNote').value = doc ? doc.attachmentNote : '';
+    document.getElementById('ep_attachmentFile').value = '';
+    document.getElementById('ep_attachment_current').innerHTML = (doc && doc.attachmentFile) ? `현재 파일: ${escapeHtml(doc.attachmentFile.name)} <a href="#" onclick="downloadFile('${doc.id}', 'main'); return false;" style="margin-left:6px;">⬇ 다운로드</a>` : '';
+    document.getElementById('ep_managerId').value = doc ? doc.managerId : '';
+    document.getElementById('ep_issueDate').value = doc ? doc.issueDate : new Date().toISOString().slice(0,10);
+  } else if(tab==='expenseResolutions'){
+    document.getElementById('modalTitle-expenseResolutions').textContent = doc ? '지출결의서 수정' : '지출결의서 작성';
+    document.getElementById('er_editId').value = doc ? doc.id : '';
+    populateProposalSelect();
+    document.getElementById('er_proposalId').value = doc ? (doc.proposalId||'') : '';
+    populateBizProjectSelects();
+    document.getElementById('er_bizProjectId').value = doc ? (doc.bizProjectId||'') : '';
+    document.getElementById('er_docNo').value = doc ? doc.docNo : '';
+    document.getElementById('er_fundSource').value = doc ? doc.fundSource : '보조금';
+    document.getElementById('er_resolutionDate').value = doc ? doc.resolutionDate : new Date().toISOString().slice(0,10);
+    document.getElementById('er_disbursementDate').value = doc ? doc.disbursementDate : new Date().toISOString().slice(0,10);
+    document.getElementById('er_subProject').value = doc ? doc.subProject : '';
+    document.getElementById('er_totalDescription').value = doc ? doc.totalDescription : '';
+    document.getElementById('er_totalDescription').readOnly = !!(doc && doc.proposalId);
+    document.getElementById('er_totalDescription').style.background = (doc && doc.proposalId) ? 'var(--paper-2)' : '';
+    expenseItemsByPrefix.er = doc && doc.items ? JSON.parse(JSON.stringify(doc.items)) : [];
+    populateManagerDirectorSelects();
+    renderExpenseItemsRows('er');
+    document.getElementById('er_paymentMethod').value = doc ? doc.paymentMethod : '계좌이체';
+    evidenceItemsState = doc && doc.evidenceItems ? JSON.parse(JSON.stringify(doc.evidenceItems)) : [];
+    renderEvidenceRows();
+    evidencePhotosState = doc && doc.evidencePhotos ? JSON.parse(JSON.stringify(doc.evidencePhotos)) : [];
+    document.getElementById('er_evidencePhotoFiles').value = '';
+    renderEvidencePhotos();
+    document.getElementById('er_attachmentFile').value = '';
+    document.getElementById('er_attachment_current').innerHTML = (doc && doc.attachmentFile) ? `현재 파일: ${escapeHtml(doc.attachmentFile.name)} <a href="#" onclick="downloadFile('${doc.id}', 'main'); return false;" style="margin-left:6px;">⬇ 다운로드</a>` : '';
+    document.getElementById('er_managerId').value = doc ? doc.managerId : '';
+    document.getElementById('er_issueDate').value = doc ? doc.issueDate : new Date().toISOString().slice(0,10);
   } else if(tab==='buildings'){
     document.getElementById('modalTitle-buildings').textContent = doc ? '건물 수정' : '건물 추가';
     document.getElementById('bd_editId').value = doc ? doc.id : '';
@@ -3724,6 +4117,39 @@ async function printCareerCertificate(item){
 }
 function closeModal(tab){ document.getElementById('overlay-'+tab).classList.remove('open'); }
 
+// 이미지 파일을 자동으로 리사이즈/재압축해서 용량을 줄임 (사진이 아니면 원본 그대로)
+function compressImageFile(file, maxDimension = 1600, quality = 0.75){
+  return new Promise((resolve) => {
+    if(!file || !file.type || !file.type.startsWith('image/') || file.type === 'image/gif'){
+      const reader = new FileReader();
+      reader.onload = () => resolve({ name:file.name, type:file.type, dataUrl:reader.result });
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(file);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+        if(width > maxDimension || height > maxDimension){
+          if(width > height){ height = Math.round(height * maxDimension / width); width = maxDimension; }
+          else { width = Math.round(width * maxDimension / height); height = maxDimension; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL('image/jpeg', quality);
+        resolve({ name: file.name.replace(/\.[^.]+$/, '') + '.jpg', type:'image/jpeg', dataUrl });
+      };
+      img.onerror = () => resolve({ name:file.name, type:file.type, dataUrl:reader.result });
+      img.src = reader.result;
+    };
+    reader.onerror = () => resolve(null);
+    reader.readAsDataURL(file);
+  });
+}
+
 function readFileAsData(inputEl){
   return new Promise((resolve) => {
     const file = inputEl.files[0];
@@ -3960,6 +4386,393 @@ function renderSdTableRows(){
   `).join('');
 }
 
+// ===== 보탬e: 품의서/지출결의서 공용 항목 행 관리 =====
+let expenseItemsByPrefix = { ep: [], er: [] };
+
+function renderExpenseItemsRows(prefix){
+  const el = document.getElementById(`${prefix}_itemsBody`);
+  const items = expenseItemsByPrefix[prefix];
+  el.innerHTML = items.map((it, i) => `
+    <div style="display:flex; gap:6px; align-items:center;">
+      <input placeholder="비목 (예: 인건비)" value="${escapeHtml(it.category||'')}" oninput="expenseItemsByPrefix['${prefix}'][${i}].category=this.value;" style="flex:1;">
+      <input placeholder="적요" value="${escapeHtml(it.description||'')}" oninput="expenseItemsByPrefix['${prefix}'][${i}].description=this.value;" style="flex:1;">
+      <input placeholder="세부내역" value="${escapeHtml(it.detail||'')}" oninput="expenseItemsByPrefix['${prefix}'][${i}].detail=this.value;" style="flex:1;">
+      <input type="number" placeholder="금액" value="${it.amount??''}" oninput="expenseItemsByPrefix['${prefix}'][${i}].amount=this.value; updateExpenseTotalPreview('${prefix}');" style="flex:1;">
+      <input placeholder="비고" value="${escapeHtml(it.note||'')}" oninput="expenseItemsByPrefix['${prefix}'][${i}].note=this.value;" style="flex:1;">
+      <button type="button" class="icon-btn del" onclick="removeExpenseItemRow('${prefix}', ${i})">삭제</button>
+    </div>
+  `).join('');
+  updateExpenseTotalPreview(prefix);
+}
+
+function addExpenseItemRow(prefix){
+  expenseItemsByPrefix[prefix].push({ category:'', description:'', detail:'', amount:'', note:'' });
+  renderExpenseItemsRows(prefix);
+}
+
+function removeExpenseItemRow(prefix, i){
+  expenseItemsByPrefix[prefix].splice(i,1);
+  renderExpenseItemsRows(prefix);
+}
+
+function updateExpenseTotalPreview(prefix){
+  const items = expenseItemsByPrefix[prefix];
+  const total = items.reduce((s,it) => s + (parseFloat(it.amount)||0), 0);
+  const el = document.getElementById(`${prefix}_totalPreview`);
+  if(el) el.textContent = `합계: ${numberToKoreanAmount(total)} (₩${total.toLocaleString()})`;
+}
+
+function collectExpenseItems(prefix){
+  return expenseItemsByPrefix[prefix].filter(it => it.category.trim() || it.description.trim()).map(it => ({
+    category: it.category.trim(), description: it.description.trim(), detail: (it.detail||'').trim(), amount: parseFloat(it.amount)||0, note: (it.note||'').trim()
+  }));
+}
+
+function calcExpenseTotal(items){
+  return (items||[]).reduce((s,it) => s + (parseFloat(it.amount)||0), 0);
+}
+
+function populateManagerDirectorSelects(){
+  const empOptions = data.employees.filter(e => !e.endDate).map(e => `<option value="${e.id}">${escapeHtml(e.name)}</option>`).join('');
+  ['ep_managerId','er_managerId'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.innerHTML = '<option value="">-- 선택 안 함 --</option>' + empOptions;
+  });
+}
+
+function populateProposalSelect(){
+  const el = document.getElementById('er_proposalId');
+  if(!el) return;
+  el.innerHTML = '<option value="">-- 선택 안 함 --</option>' +
+    data.expenseProposals.map(p => `<option value="${p.id}">${escapeHtml(p.totalDescription || p.projectName)} (${escapeHtml(p.issueDate||'')})</option>`).join('');
+}
+
+// ===== 보탬e: 사업 비목별 예산 동적 관리 =====
+let budgetItemsState = [];
+
+function renderBudgetItemsRows(){
+  const el = document.getElementById('bp_budgetBody');
+  el.innerHTML = budgetItemsState.map((b, i) => `
+    <div style="display:flex; gap:6px; align-items:center;">
+      <input placeholder="비목 (예: 인건비)" value="${escapeHtml(b.category||'')}" oninput="budgetItemsState[${i}].category=this.value;" style="flex:2;">
+      <input type="number" placeholder="예산금액" value="${b.amount??''}" oninput="budgetItemsState[${i}].amount=this.value; updateBudgetTotalPreview();" style="flex:1;">
+      <button type="button" class="icon-btn del" onclick="removeBudgetItemRow(${i})">삭제</button>
+    </div>
+  `).join('');
+  updateBudgetTotalPreview();
+}
+
+function addBudgetItemRow(){
+  budgetItemsState.push({ category:'', amount:'' });
+  renderBudgetItemsRows();
+}
+
+function removeBudgetItemRow(i){
+  budgetItemsState.splice(i,1);
+  renderBudgetItemsRows();
+}
+
+function updateBudgetTotalPreview(){
+  const total = budgetItemsState.reduce((s,b) => s + (parseFloat(b.amount)||0), 0);
+  const el = document.getElementById('bp_totalPreview');
+  if(el) el.textContent = `총 예산: ₩${total.toLocaleString()}`;
+}
+
+async function saveVendor(){
+  const btn = document.getElementById('vd_saveBtn');
+  const name = document.getElementById('vd_name').value.trim();
+  if(!name){ alert('상호명을 입력해주세요.'); return; }
+  btn.disabled = true; btn.textContent = '저장 중...';
+  const id = document.getElementById('vd_editId').value || ('vd-'+Date.now());
+  const existing = data.vendors.find(d=>d.id===id) || {};
+  const bizCertFile = await readFileAsData(document.getElementById('vd_bizCertFile'));
+  const bankCopyFile = await readFileAsData(document.getElementById('vd_bankCopyFile'));
+  let hasBizCert = existing.hasBizCert, hasBankCopy = existing.hasBankCopy;
+  if(bizCertFile){
+    const ok = await saveFileBlob(id, 'bizCert', bizCertFile);
+    if(!ok){ btn.disabled = false; btn.textContent = '저장'; return; }
+    hasBizCert = true;
+  }
+  if(bankCopyFile){
+    const ok = await saveFileBlob(id, 'bankCopy', bankCopyFile);
+    if(!ok){ btn.disabled = false; btn.textContent = '저장'; return; }
+    hasBankCopy = true;
+  }
+  const doc = {
+    id, name,
+    bizNumber: document.getElementById('vd_bizNumber').value.trim(),
+    repName: document.getElementById('vd_repName').value.trim(),
+    address: document.getElementById('vd_address').value.trim(),
+    contact: document.getElementById('vd_contact').value.trim(),
+    hasBizCert, hasBankCopy,
+    updated: Date.now()
+  };
+  const idx = data.vendors.findIndex(d=>d.id===id);
+  if(idx>=0) data.vendors[idx]=doc; else data.vendors.push(doc);
+  cacheLocal('vendors');
+  const ok = await saveItemToFirestore('vendors', doc);
+  btn.disabled = false; btn.textContent = '저장';
+  if(!ok) return;
+  closeModal('vendors');
+  render();
+}
+
+async function removeVendorFile(id, slot){
+  if(!confirm('파일을 삭제할까요?')) return;
+  await deleteFileBlob(id, slot);
+  const vendor = data.vendors.find(d=>d.id===id);
+  if(vendor){
+    if(slot==='bizCert') vendor.hasBizCert = false;
+    if(slot==='bankCopy') vendor.hasBankCopy = false;
+    await saveItemToFirestore('vendors', vendor);
+  }
+  const el = document.getElementById(slot==='bizCert' ? 'vd_bizCert_current' : 'vd_bankCopy_current');
+  if(el) el.innerHTML = '등록된 파일 없음';
+}
+
+async function saveBizProject(){
+  const btn = document.getElementById('bp_saveBtn');
+  const name = document.getElementById('bp_name').value.trim();
+  if(!name){ alert('사업명을 입력해주세요.'); return; }
+  btn.disabled = true; btn.textContent = '저장 중...';
+  const id = document.getElementById('bp_editId').value || ('bp-'+Date.now());
+  const budgetItems = budgetItemsState.filter(b => b.category.trim()).map(b => ({ category: b.category.trim(), amount: parseFloat(b.amount)||0 }));
+  const doc = {
+    id, name,
+    periodStart: document.getElementById('bp_periodStart').value,
+    periodEnd: document.getElementById('bp_periodEnd').value,
+    budgetItems,
+    updated: Date.now()
+  };
+  const idx = data.bizProjects.findIndex(d=>d.id===id);
+  if(idx>=0) data.bizProjects[idx]=doc; else data.bizProjects.push(doc);
+  cacheLocal('bizProjects');
+  const ok = await saveItemToFirestore('bizProjects', doc);
+  btn.disabled = false; btn.textContent = '저장';
+  if(!ok) return;
+  closeModal('bizProjects');
+  render();
+}
+
+// 사업의 비목별 예산 대비, 연결된 결의서들의 실제 지출을 합산해서 비교
+function calcBizProjectSpending(projectId){
+  const resolutions = data.expenseResolutions.filter(r => r.bizProjectId === projectId);
+  const spentByCategory = {};
+  resolutions.forEach(r => {
+    (r.items||[]).forEach(it => {
+      const cat = it.category || '(미분류)';
+      spentByCategory[cat] = (spentByCategory[cat]||0) + (parseFloat(it.amount)||0);
+    });
+  });
+  return spentByCategory;
+}
+
+function populateBizProjectSelects(){
+  const options = '<option value="">-- 선택 안 함 --</option>' + data.bizProjects.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+  ['ep_bizProjectId','er_bizProjectId','sc_bizProjectId'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.innerHTML = options;
+  });
+}
+
+
+function populateContractProposalSelect(){
+  const el = document.getElementById('sc_proposalId');
+  if(!el) return;
+  el.innerHTML = '<option value="">-- 선택 안 함 --</option>' +
+    data.expenseProposals.map(p => `<option value="${p.id}">${escapeHtml(p.totalDescription || p.projectName)} (${escapeHtml(p.issueDate||'')})</option>`).join('');
+}
+
+function populateContractVendorSelect(){
+  const el = document.getElementById('sc_vendorId');
+  if(!el) return;
+  el.innerHTML = '<option value="">-- 직접 입력 --</option>' +
+    data.vendors.map(v => `<option value="${v.id}">${escapeHtml(v.name)}</option>`).join('');
+}
+
+function loadVendorIntoContract(){
+  const vendorId = document.getElementById('sc_vendorId').value;
+  if(!vendorId) return;
+  const vendor = data.vendors.find(v => v.id === vendorId);
+  if(!vendor) return;
+  document.getElementById('sc_counterpartyName').value = vendor.name;
+  document.getElementById('sc_counterpartyAddress').value = vendor.address || '';
+  document.getElementById('sc_counterpartyBizNumber').value = vendor.bizNumber || '';
+  document.getElementById('sc_counterpartyRepName').value = vendor.repName || '';
+}
+
+function loadProposalIntoContract(){
+  const proposalId = document.getElementById('sc_proposalId').value;
+  if(!proposalId) return;
+  const proposal = data.expenseProposals.find(p => p.id === proposalId);
+  if(!proposal) return;
+  paymentItemsState = (proposal.items||[]).map(it => ({
+    category: it.category || it.description || '',
+    type: '계약 종료 후 지급',
+    amount: it.amount || 0,
+    note: '계산서 발행 후 2주 이내'
+  }));
+  renderPaymentItemsRows();
+}
+
+function loadBizProjectIntoProposal(){
+  const projectId = document.getElementById('ep_bizProjectId').value;
+  if(!projectId) return;
+  const project = data.bizProjects.find(p => p.id === projectId);
+  if(!project) return;
+  document.getElementById('ep_projectName').value = project.name;
+  document.getElementById('ep_periodStart').value = project.periodStart || '';
+  document.getElementById('ep_periodEnd').value = project.periodEnd || '';
+}
+
+// ===== 보탬e: 계약서 대금지급 항목 동적 관리 =====
+let paymentItemsState = [];
+
+function renderPaymentItemsRows(){
+  const el = document.getElementById('sc_paymentBody');
+  el.innerHTML = paymentItemsState.map((p, i) => `
+    <div style="display:flex; gap:6px; align-items:center;">
+      <input placeholder="항목 (예: 사무관리비)" value="${escapeHtml(p.category||'')}" oninput="paymentItemsState[${i}].category=this.value;" style="flex:2;">
+      <input type="number" placeholder="총금액" value="${p.amount??''}" oninput="paymentItemsState[${i}].amount=this.value; updatePaymentTotalPreview();" style="flex:1;">
+      <button type="button" class="icon-btn del" onclick="removePaymentItemRow(${i})">삭제</button>
+    </div>
+  `).join('');
+  updatePaymentTotalPreview();
+}
+
+function addPaymentItemRow(){
+  paymentItemsState.push({ category:'', type:'계약 종료 후 지급', amount:'', note:'계산서 발행 후 2주 이내' });
+  renderPaymentItemsRows();
+}
+
+function removePaymentItemRow(i){
+  paymentItemsState.splice(i,1);
+  renderPaymentItemsRows();
+}
+
+function updatePaymentTotalPreview(){
+  const total = paymentItemsState.reduce((s,p) => s + (parseFloat(p.amount)||0), 0);
+  const el = document.getElementById('sc_totalPreview');
+  if(el) el.textContent = `합계(VAT별도): ₩${total.toLocaleString()}`;
+}
+
+async function saveServiceContract(){
+  const btn = document.getElementById('sc_saveBtn');
+  const title = document.getElementById('sc_title').value.trim();
+  if(!title){ alert('계약서 제목을 입력해주세요.'); return; }
+  btn.disabled = true; btn.textContent = '저장 중...';
+  const id = document.getElementById('sc_editId').value || ('sc-'+Date.now());
+  const paymentItems = paymentItemsState.filter(p => p.category.trim()).map(p => ({
+    category: p.category.trim(), type: '계약 종료 후 지급', amount: parseFloat(p.amount)||0, note: '계산서 발행 후 2주 이내'
+  }));
+  const doc = {
+    id, title,
+    bizProjectId: document.getElementById('sc_bizProjectId').value,
+    proposalId: document.getElementById('sc_proposalId').value,
+    vendorId: document.getElementById('sc_vendorId').value,
+    purpose: document.getElementById('sc_purpose').value.trim(),
+    operatingPurpose: document.getElementById('sc_operatingPurpose').value.trim(),
+    periodStart: document.getElementById('sc_periodStart').value,
+    periodEnd: document.getElementById('sc_periodEnd').value,
+    content: document.getElementById('sc_content').value,
+    counterpartyName: document.getElementById('sc_counterpartyName').value.trim(),
+    counterpartyAddress: document.getElementById('sc_counterpartyAddress').value.trim(),
+    counterpartyBizNumber: document.getElementById('sc_counterpartyBizNumber').value.trim(),
+    counterpartyRepName: document.getElementById('sc_counterpartyRepName').value.trim(),
+    paymentItems,
+    agreementPeriodText: `후속 협약 체결일로부터 ${new Date().getFullYear()}년 12월 31일까지`,
+    contractDate: document.getElementById('sc_contractDate').value || new Date().toISOString().slice(0,10),
+    updated: Date.now()
+  };
+  const idx = data.serviceContracts.findIndex(d=>d.id===id);
+  if(idx>=0) data.serviceContracts[idx]=doc; else data.serviceContracts.push(doc);
+  cacheLocal('serviceContracts');
+  const ok = await saveItemToFirestore('serviceContracts', doc);
+  btn.disabled = false; btn.textContent = '저장하고 발급';
+  if(!ok) return;
+  closeModal('serviceContracts');
+  render();
+  printServiceContract(doc);
+}
+
+function loadProposalIntoResolution(){
+  const proposalId = document.getElementById('er_proposalId').value;
+  const nameField = document.getElementById('er_totalDescription');
+  if(!proposalId){
+    nameField.readOnly = false;
+    nameField.style.background = '';
+    return;
+  }
+  const proposal = data.expenseProposals.find(p => p.id === proposalId);
+  if(!proposal) return;
+  document.getElementById('er_fundSource').value = proposal.fundSource;
+  document.getElementById('er_subProject').value = proposal.projectName;
+  nameField.value = proposal.totalDescription || proposal.projectName;
+  nameField.readOnly = true;
+  nameField.style.background = 'var(--paper-2)';
+  document.getElementById('er_managerId').value = proposal.managerId || '';
+  document.getElementById('er_bizProjectId').value = proposal.bizProjectId || '';
+  expenseItemsByPrefix.er = JSON.parse(JSON.stringify(proposal.items || []));
+  renderExpenseItemsRows('er');
+}
+
+// ===== 지출결의서: 증빙자료(항목별 첨부파일) 동적 관리 =====
+let evidenceItemsState = [];
+
+function renderEvidenceRows(){
+  const el = document.getElementById('er_evidenceBody');
+  el.innerHTML = evidenceItemsState.map((ev, i) => `
+    <div style="display:flex; gap:6px; align-items:center;">
+      <input placeholder="증빙자료명 (예: 급여대장)" value="${escapeHtml(ev.description||'')}" oninput="evidenceItemsState[${i}].description=this.value;" style="flex:2;">
+      <input type="file" id="er_evidenceFile${i}" style="flex:2;">
+      ${ev.hasFile ? `<span style="font-size:12px; color:var(--mist); white-space:nowrap;">📎 ${escapeHtml(ev.fileName||'')}</span>` : ''}
+      <button type="button" class="icon-btn del" onclick="removeEvidenceRow(${i})">삭제</button>
+    </div>
+  `).join('');
+}
+
+function addEvidenceRow(){
+  evidenceItemsState.push({ description:'', hasFile:false, fileName:'', fileType:'' });
+  renderEvidenceRows();
+}
+
+// ===== 지출결의서: 증빙 사진(여러 장, 자동 압축) 관리 =====
+let evidencePhotosState = [];
+
+function addEvidencePhotos(inputEl){
+  const files = Array.from(inputEl.files);
+  Promise.all(files.map(f => compressImageFile(f))).then(results => {
+    results.forEach(r => {
+      if(r) evidencePhotosState.push({ slotId: 'evp'+Date.now()+Math.random().toString(36).slice(2,6), fileName:r.name, fileType:r.type, dataUrl:r.dataUrl, description:'', isNew:true });
+    });
+    renderEvidencePhotos();
+    inputEl.value = '';
+  });
+}
+
+function removeEvidencePhoto(i){
+  evidencePhotosState.splice(i,1);
+  renderEvidencePhotos();
+}
+
+function renderEvidencePhotos(){
+  const el = document.getElementById('er_evidencePhotoBody');
+  el.innerHTML = evidencePhotosState.map((p,i) => `
+    <div style="position:relative; width:80px;">
+      ${p.dataUrl
+        ? `<img src="${p.dataUrl}" style="width:80px; height:80px; object-fit:cover; border:1px solid var(--line); border-radius:4px;">`
+        : `<div style="width:80px; height:80px; display:flex; align-items:center; justify-content:center; border:1px solid var(--line); border-radius:4px; font-size:10.5px; text-align:center; padding:4px; word-break:break-all;">${escapeHtml(p.fileName||'사진')}</div>`}
+      <input placeholder="설명" value="${escapeHtml(p.description||'')}" oninput="evidencePhotosState[${i}].description=this.value;" style="width:80px; font-size:11px; padding:3px 4px; margin-top:4px;">
+      <button type="button" onclick="removeEvidencePhoto(${i})" style="position:absolute; top:-6px; right:-6px; background:var(--danger); color:#fff; border:none; border-radius:50%; width:20px; height:20px; cursor:pointer; font-size:12px; line-height:1;">×</button>
+    </div>
+  `).join('');
+}
+
+function removeEvidenceRow(i){
+  evidenceItemsState.splice(i,1);
+  renderEvidenceRows();
+}
+
 function generateDocNo(){
   const today = new Date();
   const dateStr = `${today.getFullYear()}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}`;
@@ -4036,6 +4849,120 @@ async function saveMeetingMinutes(){
   if(!ok) return;
   closeModal('meetingMinutes');
   render();
+}
+
+async function saveExpenseProposal(){
+  const btn = document.getElementById('ep_saveBtn');
+  const projectName = document.getElementById('ep_projectName').value.trim();
+  if(!projectName){ alert('사업명을 입력해주세요.'); return; }
+  btn.disabled = true; btn.textContent = '저장 중...';
+  const id = document.getElementById('ep_editId').value || ('ep-'+Date.now());
+  const existing = data.expenseProposals.find(d=>d.id===id) || {};
+  const items = collectExpenseItems('ep');
+  const newFile = await readFileAsData(document.getElementById('ep_attachmentFile'));
+  let fileMeta = existing.attachmentFile || null;
+  if(newFile){
+    const ok = await saveFileBlob(id, 'main', newFile);
+    if(!ok){ btn.disabled = false; btn.textContent = '저장하고 발급'; return; }
+    fileMeta = { name:newFile.name, type:newFile.type };
+  }
+  const doc = {
+    id,
+    docNo: generateDocNo(),
+    fundSource: document.getElementById('ep_fundSource').value,
+    projectName,
+    totalDescription: document.getElementById('ep_totalDescription').value.trim(),
+    projectPeriodStart: document.getElementById('ep_periodStart').value,
+    projectPeriodEnd: document.getElementById('ep_periodEnd').value,
+    items,
+    amount: calcExpenseTotal(items),
+    attachmentNote: document.getElementById('ep_attachmentNote').value.trim(),
+    attachmentFile: fileMeta,
+    managerId: document.getElementById('ep_managerId').value,
+    bizProjectId: document.getElementById('ep_bizProjectId').value,
+    directorId: (data.employees.find(e=>e.name==='이정우')||{}).id || '',
+    issueDate: document.getElementById('ep_issueDate').value || new Date().toISOString().slice(0,10),
+    updated: Date.now()
+  };
+  const idx = data.expenseProposals.findIndex(d=>d.id===id);
+  if(idx>=0) data.expenseProposals[idx]=doc; else data.expenseProposals.push(doc);
+  cacheLocal('expenseProposals');
+  const ok = await saveItemToFirestore('expenseProposals', doc);
+  btn.disabled = false; btn.textContent = '저장하고 발급';
+  if(!ok) return;
+  closeModal('expenseProposals');
+  render();
+  printExpenseProposal(doc);
+}
+
+async function saveExpenseResolution(){
+  const btn = document.getElementById('er_saveBtn');
+  const subProject = document.getElementById('er_subProject').value.trim();
+  if(!subProject){ alert('세부사업을 입력해주세요.'); return; }
+  btn.disabled = true; btn.textContent = '저장 중...';
+  const id = document.getElementById('er_editId').value || ('er-'+Date.now());
+  const existing = data.expenseResolutions.find(d=>d.id===id) || {};
+  const items = collectExpenseItems('er');
+  const newFile = await readFileAsData(document.getElementById('er_attachmentFile'));
+  let fileMeta = existing.attachmentFile || null;
+  if(newFile){
+    const ok = await saveFileBlob(id, 'main', newFile);
+    if(!ok){ btn.disabled = false; btn.textContent = '저장하고 발급'; return; }
+    fileMeta = { name:newFile.name, type:newFile.type };
+  }
+  const evidenceItems = [];
+  for(let i=0; i<evidenceItemsState.length; i++){
+    const ev = evidenceItemsState[i];
+    if(!ev.description.trim() && !ev.hasFile) continue;
+    const evFile = await readFileAsData(document.getElementById(`er_evidenceFile${i}`));
+    let evHasFile = ev.hasFile, evFileName = ev.fileName, evFileType = ev.fileType;
+    if(evFile){
+      const ok = await saveFileBlob(id, `evidence${i}`, evFile);
+      if(!ok){ btn.disabled = false; btn.textContent = '저장하고 발급'; return; }
+      evHasFile = true; evFileName = evFile.name; evFileType = evFile.type;
+    }
+    evidenceItems.push({ description: ev.description.trim(), hasFile: evHasFile, fileName: evFileName, fileType: evFileType });
+  }
+  const evidencePhotos = [];
+  for(const p of evidencePhotosState){
+    if(p.isNew){
+      const ok = await saveFileBlob(id, p.slotId, { name:p.fileName, type:p.fileType, dataUrl:p.dataUrl });
+      if(!ok){ btn.disabled = false; btn.textContent = '저장하고 발급'; return; }
+    }
+    evidencePhotos.push({ slotId: p.slotId, fileName: p.fileName, fileType: p.fileType, description: (p.description||'').trim() });
+  }
+  const doc = {
+    id,
+    proposalId: document.getElementById('er_proposalId').value,
+    bizProjectId: document.getElementById('er_bizProjectId').value,
+    docNo: document.getElementById('er_docNo').value.trim() || generateDocNo(),
+    fundSource: document.getElementById('er_fundSource').value,
+    resolutionDate: document.getElementById('er_resolutionDate').value,
+    disbursementDate: document.getElementById('er_disbursementDate').value,
+    subProject,
+    totalDescription: document.getElementById('er_totalDescription').value.trim(),
+    items,
+    amount: calcExpenseTotal(items),
+    payeeAddress: '부산광역시 동구 영초길191번길 10-2',
+    payeeCompany: '공공플랜',
+    payeeName: '이유한',
+    paymentMethod: document.getElementById('er_paymentMethod').value.trim(),
+    evidenceItems,
+    evidencePhotos,
+    attachmentFile: fileMeta,
+    managerId: document.getElementById('er_managerId').value,
+    issueDate: document.getElementById('er_issueDate').value || new Date().toISOString().slice(0,10),
+    updated: Date.now()
+  };
+  const idx = data.expenseResolutions.findIndex(d=>d.id===id);
+  if(idx>=0) data.expenseResolutions[idx]=doc; else data.expenseResolutions.push(doc);
+  cacheLocal('expenseResolutions');
+  const ok = await saveItemToFirestore('expenseResolutions', doc);
+  btn.disabled = false; btn.textContent = '저장하고 발급';
+  if(!ok) return;
+  closeModal('expenseResolutions');
+  render();
+  printExpenseResolution(doc);
 }
 
 // ===== 심사결과 알림 공문: 위원/지원자 동적 관리 =====
@@ -7093,6 +8020,33 @@ function printLeaseContract(doc){
 
 const KOREAN_ORDINALS = ['가','나','다','라','마','바','사','아','자','차','카','타','파','하'];
 
+// 숫자를 한글 금액 표현으로 변환 (예: 2700000 -> "일금이백칠십만원")
+function numberToKoreanAmount(num){
+  num = Math.round(Number(num) || 0);
+  if(num === 0) return '일금영원';
+  const digits = ['','일','이','삼','사','오','육','칠','팔','구'];
+  const smallUnits = ['','십','백','천'];
+  const bigUnits = ['','만','억','조'];
+  function fourDigitToKorean(n){
+    let s = '';
+    for(let i=3; i>=0; i--){
+      const d = Math.floor(n / Math.pow(10,i)) % 10;
+      if(d === 0) continue;
+      s += (d===1 && i>0 ? '' : digits[d]) + smallUnits[i];
+    }
+    return s;
+  }
+  let result = '';
+  let groups = [];
+  let n = num;
+  while(n > 0){ groups.unshift(n % 10000); n = Math.floor(n / 10000); }
+  groups.forEach((g, i) => {
+    const unitIdx = groups.length - 1 - i;
+    if(g > 0) result += fourDigitToKorean(g) + bigUnits[unitIdx];
+  });
+  return '일금' + result + '원';
+}
+
 // 표 열 제목 등에서 이름이 길면(5자 이상) 절반으로 나눠 줄바꿈되게 함
 function wrapLongLabel(text){
   if(!text || text.length < 5) return escapeHtml(text||'');
@@ -7523,6 +8477,440 @@ ${buildMeetingConfirmationFragment(doc)}
   });
 }
 
+// ===== 보탬e: 품의서/지출결의서 출력 =====
+async function printExpenseProposal(doc){
+  const company = data.settings.company || {};
+  const manager = data.employees.find(e => e.id === doc.managerId);
+  const director = data.employees.find(e => e.id === doc.directorId);
+  const accountant = data.employees.find(e => e.name === '이정우');
+  const totalText = numberToKoreanAmount(doc.amount);
+
+  const win = window.open('', '_blank');
+  if(!win){ alert('팝업이 차단되어 발급 화면을 열 수 없어요. 브라우저 주소창의 팝업 차단 아이콘을 눌러 이 사이트의 팝업을 허용해주세요.'); return; }
+  win.document.write(`
+<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>지출품의서 - ${escapeHtml(doc.projectName)}</title>
+<style>
+  body{ font-family:'Malgun Gothic','Noto Sans KR',sans-serif; padding:35px 50px; color:#111; font-size:13px; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .top-label{ display:inline-block; background:#dceaf7; border:1px dashed #000; padding:6px 14px; font-size:12.5px; font-weight:700; margin-bottom:16px; }
+  .title{ text-align:center; font-size:22px; font-weight:800; margin-bottom:18px; letter-spacing:2px; white-space:nowrap; }
+  .main-frame{ border:1px solid #000; }
+  .frame-row{ border-top:1px solid #000; padding:10px 14px; }
+  table.frame-row{ border-top:none; padding:0; }
+  .main-frame > .frame-row:first-child{ border-top:none; }
+  .fund-approve-row{ display:flex; justify-content:space-between; align-items:stretch; padding:0; border-top:none; }
+  .fund-source{ padding:16px 14px; font-size:13.5px; align-self:center; }
+  .approve-table{ border-collapse:collapse; }
+  .approve-table th, .approve-table td{ border-left:1px solid #000; border-bottom:1px solid #000; text-align:center; padding:6px 16px; font-size:12px; }
+  .approve-table tr:first-child th{ border-top:none; }
+  .approve-table tr:last-child td, .approve-table tr:last-child th{ border-bottom:none; }
+  .approve-table td.seal-cell{ height:52px; width:58px; position:relative; }
+  .approve-table td.seal-cell img{ width:38px; height:38px; object-fit:contain; }
+  .approve-table th.seal-label{ padding:6px 6px; font-size:13px; font-weight:700; line-height:1.4; }
+  .amount-line{ font-weight:700; font-size:15px; text-decoration:underline; padding:13px 18px !important; }
+  table.meta-table{ width:100%; border-collapse:collapse; }
+  table.meta-table td{ padding:8px 12px; font-size:12.5px; border:1px solid #000; }
+  table.meta-table td.label{ background:#f2f2f2; font-weight:700; width:90px; text-align:center; }
+  .section-title{ text-align:center; font-weight:700; }
+  table.items-table{ width:100%; border-collapse:collapse; font-size:12px; }
+  table.items-table th, table.items-table td{ border:1px solid #000; padding:7px 8px; text-align:center; }
+  table.items-table th{ background:#f2f2f2; font-weight:700; }
+  .stmt{ text-align:center; font-size:14px; padding:20px 14px; }
+  .sign-block{ text-align:center; font-size:13.5px; border-top:none !important; padding:4px 14px !important; }
+  .sign-block img.seal{ width:32px; height:32px; object-fit:contain; vertical-align:middle; margin-left:4px; }
+  footer{ margin-top:24px; font-size:10.5px; color:#333; line-height:1.8; }
+  .attach-page{ page-break-before:always; padding-top:30px; }
+  .attach-wrap{ display:flex; border:1px solid #000; min-height:600px; }
+  .attach-sidebar{ writing-mode:vertical-rl; background:#dceaf7; border-right:1px solid #000; padding:20px 10px; font-size:18px; font-weight:800; letter-spacing:6px; display:flex; align-items:center; justify-content:center; }
+  .attach-main{ flex:1; padding:24px; display:flex; align-items:center; justify-content:center; }
+  .attach-title{ text-align:center; font-size:18px; font-weight:800; margin-bottom:18px; border-bottom:1px solid #000; padding-bottom:14px; }
+  .attach-frame{ text-align:center; }
+  .attach-frame img{ max-width:100%; max-height:640px; object-fit:contain; }
+  .attach-frame embed{ width:100%; height:640px; }
+</style>
+</head><body>
+  <div class="top-label">물품구입 기안문(약식 기안)</div>
+  <div class="title">지 출 품 의 서(약식)</div>
+
+  <div class="main-frame">
+    <div class="frame-row fund-approve-row">
+      <div class="fund-source">재원구분 : ${doc.fundSource==='보조금'?'☑':'☐'} 보조금&nbsp;&nbsp;&nbsp;&nbsp;${doc.fundSource==='자부담'?'☑':'☐'} 자부담</div>
+      <table class="approve-table">
+        <tr><th>담당자</th><th>사내이사</th><th>대표이사</th><th rowspan="2" class="seal-label">결<br>재</th></tr>
+        <tr><td class="seal-cell">${manager && manager.hasSeal ? `<img id="epManagerSeal">` : ''}</td><td class="seal-cell">${director && director.hasSeal ? `<img id="epDirectorSeal">` : ''}</td><td class="seal-cell">${company.hasSeal ? `<img id="epCeoSeal">` : ''}</td></tr>
+      </table>
+    </div>
+
+    <div class="frame-row amount-line">지출 추정금액 : ${escapeHtml(totalText)} (₩${doc.amount.toLocaleString()})</div>
+
+    <table class="frame-row meta-table"><tr><td class="label" style="padding:2px 8px; font-size:11.5px;">사업명</td><td style="padding:2px 8px; font-size:11.5px;">${escapeHtml(doc.projectName)}</td><td class="label" style="padding:2px 8px; font-size:11.5px;">사업기간</td><td style="padding:2px 8px; font-size:11.5px;">${escapeHtml(doc.projectPeriodStart||'')} ~ ${escapeHtml(doc.projectPeriodEnd||'')}</td></tr></table>
+
+    <div class="frame-row section-title">산 출 내 역</div>
+
+    <div class="frame-row" style="padding:0;">
+      <table class="items-table">
+        <thead><tr><th style="width:40px;">연번</th><th style="width:80px;">비목</th><th>적요(산출내역)</th><th style="width:110px;">추정금액(원)</th><th style="width:80px;">비고</th></tr></thead>
+        <tbody>
+          <tr><td></td><td>합계</td><td><b>${escapeHtml(doc.totalDescription || doc.projectName)}</b></td><td>${doc.amount.toLocaleString()}</td><td></td></tr>
+          ${doc.items.map((it,i) => `<tr><td>${i+1}</td><td>${escapeHtml(it.category)}</td><td>${escapeHtml(it.description)}</td><td>${(it.amount||0).toLocaleString()}</td><td>${escapeHtml(it.note||'')}</td></tr>`).join('')}
+          ${Array.from({length: Math.max(0, 7 - 1 - doc.items.length)}).map(() => `<tr><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="frame-row">${doc.attachmentNote ? `<b>첨부</b> : ${escapeHtml(doc.attachmentNote)}` : '&nbsp;'}</div>
+
+    <div class="frame-row stmt">상기와 같이 예산을 집행코자 합니다.</div>
+    <div class="frame-row sign-block">${formatDotDate(doc.issueDate)}</div>
+    <div class="frame-row sign-block" style="padding-bottom:14px !important;">단체명 : ${escapeHtml(company.name||'')}&nbsp;&nbsp;&nbsp;&nbsp;회계담당자 : ${escapeHtml(accountant ? accountant.name : '이정우')}${accountant && accountant.hasSeal ? `<img class="seal" id="epAccountantSeal">` : ''}</div>
+  </div>
+
+  <footer>
+    1. 동일 사업에 대하여 여러 건을 품의하는 경우 1개의 지출품의서에 일괄 품의 사용 가능<br>
+    2. 결재란 : 결재권자는 단체의 형편에 맞게 조정사용<br>
+    3. 사업기간 : 해당 단위사업 개최일 또는 운영기간 기재<br>
+    4. 관련계획서 : 추진일정 등이 나오는 당초 사업계획서를 기재하고 사본 첨부
+  </footer>
+
+  ${doc.attachmentFile ? `<div class="attach-page"><div class="attach-wrap"><div class="attach-sidebar">첨&nbsp;&nbsp;부</div><div class="attach-main"><div class="attach-frame" id="attachPageSlot"></div></div></div></div>` : ''}
+</body></html>`);
+  win.document.close();
+
+  Promise.all([
+    manager && manager.hasSeal ? fetchFileBlob(manager.id, 'seal') : Promise.resolve(null),
+    director && director.hasSeal ? fetchFileBlob(director.id, 'seal') : Promise.resolve(null),
+    company.hasSeal ? fetchFileBlob('_company', 'seal') : Promise.resolve(null),
+    doc.attachmentFile ? fetchFileBlob(doc.id, 'main') : Promise.resolve(null),
+    accountant && accountant.hasSeal ? fetchFileBlob(accountant.id, 'seal') : Promise.resolve(null)
+  ]).then(([managerSeal, directorSeal, ceoSeal, attachFile, accountantSeal]) => {
+    const imgLoadPromises = [];
+    if(managerSeal){
+      const img = win.document.getElementById('epManagerSeal');
+      if(img){ imgLoadPromises.push(waitImgLoad(img)); img.src = managerSeal.dataUrl; }
+    }
+    if(accountantSeal){
+      const img = win.document.getElementById('epAccountantSeal');
+      if(img){ imgLoadPromises.push(waitImgLoad(img)); img.src = accountantSeal.dataUrl; }
+    }
+    if(directorSeal){
+      const img = win.document.getElementById('epDirectorSeal');
+      if(img){ imgLoadPromises.push(waitImgLoad(img)); img.src = directorSeal.dataUrl; }
+    }
+    if(ceoSeal){
+      const img = win.document.getElementById('epCeoSeal');
+      if(img){ imgLoadPromises.push(waitImgLoad(img)); img.src = ceoSeal.dataUrl; }
+    }
+    if(attachFile){
+      const slot = win.document.getElementById('attachPageSlot');
+      if(slot){
+        if((doc.attachmentFile.type||'').startsWith('image/')){
+          const img = win.document.createElement('img');
+          imgLoadPromises.push(waitImgLoad(img));
+          img.src = attachFile.dataUrl;
+          slot.appendChild(img);
+        } else if(doc.attachmentFile.type === 'application/pdf'){
+          const embedEl = win.document.createElement('embed');
+          embedEl.src = attachFile.dataUrl;
+          embedEl.type = 'application/pdf';
+          slot.appendChild(embedEl);
+        } else {
+          slot.textContent = `첨부파일(${doc.attachmentFile.name})은 이 화면에서 미리보기가 안 돼요. 대시보드에서 따로 다운로드해주세요.`;
+        }
+      }
+    }
+    Promise.all(imgLoadPromises).then(() => win.print());
+  });
+}
+
+async function printExpenseResolution(doc){
+  const company = data.settings.company || {};
+  const manager = data.employees.find(e => e.id === doc.managerId);
+  const totalText = numberToKoreanAmount(doc.amount);
+  const evidenceItems = doc.evidenceItems || [];
+  const evidencePhotos = doc.evidencePhotos || [];
+  const photoPages = [];
+  for(let i=0; i<evidencePhotos.length; i+=4) photoPages.push(evidencePhotos.slice(i,i+4));
+
+  const win = window.open('', '_blank');
+  if(!win){ alert('팝업이 차단되어 발급 화면을 열 수 없어요. 브라우저 주소창의 팝업 차단 아이콘을 눌러 이 사이트의 팝업을 허용해주세요.'); return; }
+  win.document.write(`
+<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>지출결의서 - ${escapeHtml(doc.subProject)}</title>
+<style>
+  body{ font-family:'Malgun Gothic','Noto Sans KR',sans-serif; padding:35px 50px; color:#111; font-size:13px; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .top-label{ display:inline-block; background:#dceaf7; border:1px dashed #000; padding:6px 14px; font-size:12.5px; font-weight:700; margin-bottom:16px; }
+  .title{ text-align:center; font-size:22px; font-weight:800; margin-bottom:18px; letter-spacing:2px; white-space:nowrap; }
+  .main-frame{ border:1px solid #000; }
+  .frame-row{ border-top:1px solid #000; padding:10px 14px; }
+  table.frame-row{ border-top:none; padding:0; }
+  .main-frame > .frame-row:first-child{ border-top:none; }
+  .fund-approve-row{ display:flex; justify-content:space-between; align-items:stretch; padding:0; border-top:none; }
+  .fund-block{ padding:16px 14px; font-size:13.5px; align-self:center; line-height:1.8; }
+  .approve-table{ border-collapse:collapse; }
+  .approve-table th, .approve-table td{ border-left:1px solid #000; border-bottom:1px solid #000; text-align:center; padding:6px 20px; font-size:12px; }
+  .approve-table tr:first-child th{ border-top:none; }
+  .approve-table tr:last-child td, .approve-table tr:last-child th{ border-bottom:none; }
+  .approve-table td.seal-cell{ height:52px; width:58px; position:relative; }
+  .approve-table td.seal-cell img{ width:38px; height:38px; object-fit:contain; }
+  .approve-table th.seal-label{ padding:6px 6px; font-size:13px; font-weight:700; line-height:1.4; }
+  .amount-line{ font-weight:700; font-size:15px; text-decoration:underline; }
+  table.meta-table{ width:100%; border-collapse:collapse; table-layout:fixed; }
+  table.meta-table td{ padding:8px 12px; font-size:12.5px; border:1px solid #000; }
+  table.meta-table td.label{ background:#f2f2f2; font-weight:700; width:130px; text-align:center; }
+  .section-title{ text-align:center; font-weight:700; }
+  table.items-table{ width:100%; border-collapse:collapse; font-size:12px; table-layout:fixed; }
+  table.items-table th, table.items-table td{ border:1px solid #000; padding:7px 8px; text-align:center; }
+  table.items-table th{ background:#f2f2f2; font-weight:700; }
+  .evidence{ font-size:12.5px; }
+  .stmt{ text-align:center; font-size:14px; padding:20px 14px; }
+  .sign-block{ text-align:center; font-size:13.5px; border-top:none !important; padding:4px 14px !important; }
+  .sign-block img.seal{ width:32px; height:32px; object-fit:contain; vertical-align:middle; margin-left:4px; }
+  .attach-page{ page-break-before:always; padding-top:30px; }
+  .attach-wrap{ display:flex; border:1px solid #000; min-height:600px; }
+  .attach-sidebar{ writing-mode:vertical-rl; background:#dceaf7; border-right:1px solid #000; padding:20px 10px; font-size:18px; font-weight:800; letter-spacing:6px; display:flex; align-items:center; justify-content:center; }
+  .attach-main{ flex:1; padding:24px; display:flex; align-items:center; justify-content:center; }
+  .attach-frame{ text-align:center; }
+  .attach-frame img{ max-width:100%; max-height:640px; object-fit:contain; }
+  .attach-frame embed{ width:100%; height:640px; }
+</style>
+</head><body>
+  <div class="top-label">지출결의서</div>
+  <div class="title">지 출 결 의 서</div>
+
+  <div class="main-frame">
+    <div class="frame-row fund-approve-row">
+      <div class="fund-block">
+        <div>증제 ${escapeHtml(doc.docNo)}호</div>
+        <div>재원구분 : ${doc.fundSource==='보조금'?'☑':'☐'} 보조금&nbsp;&nbsp;&nbsp;&nbsp;${doc.fundSource==='자부담'?'☑':'☐'} 자부담</div>
+      </div>
+      <table class="approve-table">
+        <tr><th>담당자</th><th>대표자</th><th rowspan="2" class="seal-label">결<br>재</th></tr>
+        <tr><td class="seal-cell">${manager && manager.hasSeal ? `<img id="erManagerSeal">` : ''}</td><td class="seal-cell">${company.hasSeal ? `<img id="erCeoSeal">` : ''}</td></tr>
+      </table>
+    </div>
+
+    <div class="frame-row amount-line">지출금액 : ${escapeHtml(totalText)} (₩${doc.amount.toLocaleString()})</div>
+
+    <table class="frame-row meta-table">
+      <tr><td class="label">③ 발의 및 편입행위일</td><td>${escapeHtml(doc.resolutionDate||'')}</td><td class="label">④ 지출부기재일</td><td>${escapeHtml(doc.disbursementDate||'')}</td></tr>
+      <tr><td class="label">⑤ 세부사업</td><td colspan="3">${escapeHtml(doc.subProject)}</td></tr>
+    </table>
+
+    <div class="frame-row section-title">지 출 내 역</div>
+
+    <div class="frame-row" style="padding:0;">
+      <table class="items-table">
+        <colgroup><col style="width:90px"><col><col><col style="width:110px"><col style="width:80px"></colgroup>
+        <thead>
+          <tr><th>⑥ 비목</th><th colspan="2">적요(인원,수량,단가 등 기재)</th><th>금액</th><th>비고</th></tr>
+        </thead>
+        <tbody>
+          ${doc.items.map(it => `<tr><td>${escapeHtml(it.category)}</td><td>${escapeHtml(it.description)}</td><td>${escapeHtml(it.detail||'')}</td><td>${(it.amount||0).toLocaleString()}</td><td>${escapeHtml(it.note||'')}</td></tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+
+    <table class="frame-row meta-table">
+      <colgroup><col style="width:90px"><col><col><col style="width:110px"><col style="width:80px"></colgroup>
+      <tr><td class="label" rowspan="3" style="width:90px;">⑦ 채주</td><td colspan="2">주소 : 부산광역시 동구 영초길191번길 10-2</td><td class="label" rowspan="3" style="width:110px;">⑧ 지급방법</td><td rowspan="3">${escapeHtml(doc.paymentMethod||'')}</td></tr>
+      <tr><td colspan="2">상호 : 공공플랜</td></tr>
+      <tr><td colspan="2">성명 : 이유한</td></tr>
+    </table>
+
+    ${evidenceItems.length ? `
+    <table class="frame-row meta-table">
+      <colgroup><col style="width:90px"><col><col><col style="width:110px"><col style="width:80px"></colgroup>
+      <tr><td class="label" style="width:90px;">증빙자료</td><td colspan="4">${evidenceItems.map((ev,i) => `${i+1}. ${escapeHtml(ev.description || '(내용 없음)')}${ev.hasFile ? ' 📎' : ''}`).join('<br>')}</td></tr>
+    </table>
+    ` : ''}
+
+    <div class="frame-row stmt">상기와 같이 인출하여 지출하고자 합니다.</div>
+    <div class="frame-row sign-block">${formatDotDate(doc.issueDate)}</div>
+    <div class="frame-row sign-block" style="padding-bottom:14px !important;">단체명 ${escapeHtml(company.name||'')}&nbsp;&nbsp;&nbsp;&nbsp;회계담당자 ${escapeHtml(manager ? manager.name : '')}${manager && manager.hasSeal ? `<img class="seal" id="erManagerSeal2">` : ''}</div>
+  </div>
+
+  ${doc.attachmentFile ? `<div class="attach-page"><div class="attach-wrap"><div class="attach-sidebar">첨&nbsp;&nbsp;부</div><div class="attach-main"><div class="attach-frame" id="attachPageSlot"></div></div></div></div>` : ''}
+  ${evidenceItems.map((ev,i) => ev.hasFile ? `<div class="attach-page"><div class="attach-wrap"><div class="attach-sidebar">${escapeHtml(ev.description || '증빙자료')}</div><div class="attach-main"><div class="attach-frame" id="evidencePageSlot${i}"></div></div></div></div>` : '').join('')}
+  ${photoPages.map((page, pi) => `
+  <div class="attach-page">
+    <div class="attach-wrap">
+      <div class="attach-sidebar">증빙사진</div>
+      <div class="attach-main" style="display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:14px; width:100%; height:640px;">
+        ${page.map((p, idx) => `
+          <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:320px; width:100%; overflow:hidden;">
+            <img id="evPhotoSlot${pi}_${idx}" style="max-width:100%; max-height:290px; object-fit:contain; border:1px solid #ccc;">
+            ${p.description ? `<div style="font-size:11.5px; margin-top:4px; text-align:center;">${escapeHtml(p.description)}</div>` : ''}
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  </div>
+  `).join('')}
+</body></html>`);
+  win.document.close();
+
+  Promise.all([
+    manager && manager.hasSeal ? fetchFileBlob(manager.id, 'seal') : Promise.resolve(null),
+    company.hasSeal ? fetchFileBlob('_company', 'seal') : Promise.resolve(null),
+    doc.attachmentFile ? fetchFileBlob(doc.id, 'main') : Promise.resolve(null),
+    ...evidenceItems.map((ev,i) => ev.hasFile ? fetchFileBlob(doc.id, `evidence${i}`) : Promise.resolve(null)),
+    ...evidencePhotos.map(p => fetchFileBlob(doc.id, p.slotId))
+  ]).then(([managerSeal, ceoSeal, attachFile, ...rest]) => {
+    const evidenceFiles = rest.slice(0, evidenceItems.length);
+    const photoFiles = rest.slice(evidenceItems.length);
+    const imgLoadPromises = [];
+    if(managerSeal){
+      ['erManagerSeal','erManagerSeal2'].forEach(id => {
+        const img = win.document.getElementById(id);
+        if(img){ imgLoadPromises.push(waitImgLoad(img)); img.src = managerSeal.dataUrl; }
+      });
+    }
+    if(ceoSeal){
+      const img = win.document.getElementById('erCeoSeal');
+      if(img){ imgLoadPromises.push(waitImgLoad(img)); img.src = ceoSeal.dataUrl; }
+    }
+    if(attachFile){
+      const slot = win.document.getElementById('attachPageSlot');
+      if(slot){
+        if((doc.attachmentFile.type||'').startsWith('image/')){
+          const img = win.document.createElement('img');
+          imgLoadPromises.push(waitImgLoad(img));
+          img.src = attachFile.dataUrl;
+          slot.appendChild(img);
+        } else if(doc.attachmentFile.type === 'application/pdf'){
+          const embedEl = win.document.createElement('embed');
+          embedEl.src = attachFile.dataUrl;
+          embedEl.type = 'application/pdf';
+          slot.appendChild(embedEl);
+        } else {
+          slot.textContent = `첨부파일(${doc.attachmentFile.name})은 이 화면에서 미리보기가 안 돼요. 대시보드에서 따로 다운로드해주세요.`;
+        }
+      }
+    }
+    evidenceFiles.forEach((evFile, i) => {
+      if(!evFile) return;
+      const slot = win.document.getElementById(`evidencePageSlot${i}`);
+      if(!slot) return;
+      const ev = evidenceItems[i];
+      if((ev.fileType||'').startsWith('image/')){
+        const img = win.document.createElement('img');
+        imgLoadPromises.push(waitImgLoad(img));
+        img.src = evFile.dataUrl;
+        slot.appendChild(img);
+      } else if(ev.fileType === 'application/pdf'){
+        const embedEl = win.document.createElement('embed');
+        embedEl.src = evFile.dataUrl;
+        embedEl.type = 'application/pdf';
+        slot.appendChild(embedEl);
+      } else {
+        slot.textContent = `첨부파일(${ev.fileName})은 이 화면에서 미리보기가 안 돼요.`;
+      }
+    });
+    let photoIdx = 0;
+    photoPages.forEach((page, pi) => {
+      page.forEach((p, idx) => {
+        const photoFile = photoFiles[photoIdx];
+        photoIdx++;
+        if(!photoFile) return;
+        const img = win.document.getElementById(`evPhotoSlot${pi}_${idx}`);
+        if(img){ imgLoadPromises.push(waitImgLoad(img)); img.src = photoFile.dataUrl; }
+      });
+    });
+    Promise.all(imgLoadPromises).then(() => win.print());
+  });
+}
+
+// ===== 보탬e: 서비스 계약서 출력 =====
+async function printServiceContract(doc){
+  const company = data.settings.company || {};
+  const contentLines = (doc.content||'').split('\n').map(l=>l.trim()).filter(Boolean);
+  const totalAmount = (doc.paymentItems||[]).reduce((s,p)=>s+(p.amount||0),0);
+
+  const win = window.open('', '_blank');
+  if(!win){ alert('팝업이 차단되어 발급 화면을 열 수 없어요. 브라우저 주소창의 팝업 차단 아이콘을 눌러 이 사이트의 팝업을 허용해주세요.'); return; }
+  win.document.write(`
+<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>${escapeHtml(doc.title)}</title>
+<style>
+  body{ font-family:'Malgun Gothic','Noto Sans KR',sans-serif; padding:40px 55px; color:#111; font-size:13.5px; line-height:1.8; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .title{ text-align:center; font-size:20px; font-weight:800; margin-bottom:26px; border-bottom:2px solid #000; padding-bottom:14px; }
+  .clause-title{ font-weight:800; margin:20px 0 6px; }
+  .clause-item{ margin:0 0 4px 6px; }
+  table.pay-table{ width:100%; border-collapse:collapse; margin:8px 0 12px; font-size:12.5px; }
+  table.pay-table th, table.pay-table td{ border:1px solid #000; padding:7px 8px; text-align:center; }
+  table.pay-table th{ background:#f2f2f2; font-weight:700; }
+  .sign-date{ text-align:center; font-size:15px; margin:30px 0; }
+  .sign-block{ display:flex; gap:24px; margin-top:16px; }
+  .sign-col{ flex:1; font-size:13.5px; line-height:2; }
+  .sign-col .seal-line{ display:flex; align-items:center; gap:6px; }
+  .sign-col img.seal{ width:34px; height:34px; object-fit:contain; }
+</style>
+</head><body>
+  <div class="title">${escapeHtml(doc.title)}</div>
+
+  <div class="clause-title">제1조 [계약의 목적]</div>
+  <div>본 계약은 ${escapeHtml(company.name||'㈜공공플랜')}(이하 "갑"이라한다)와 ${escapeHtml(doc.counterpartyName)}(이하 "을"이라한다.) 사이에 "갑"의 ${escapeHtml(doc.purpose)}에 필요한 서비스를 제공함에 있어, 관련된 제반사항을 규정함에 그 목적이 있다.</div>
+
+  <div class="clause-title">제2조 [개요]</div>
+  <div class="clause-item">① 운영목적 : ${escapeHtml(doc.operatingPurpose)}</div>
+  <div class="clause-item">② 기간 : ${escapeHtml(doc.periodStart||'')} ~ ${escapeHtml(doc.periodEnd||'')}</div>
+  <div class="clause-item">③ 대상 : ${escapeHtml(company.name||'㈜공공플랜')}</div>
+  <div class="clause-item">④ 내용</div>
+  ${contentLines.map(l => `<div class="clause-item" style="margin-left:18px;">○ ${escapeHtml(l)}</div>`).join('')}
+
+  <div class="clause-title">제3조 [사업 운영 관련 추가금에 따른 대금지급]</div>
+  <div class="clause-item">① 기획 및 제작에 소요되는 "을"의 인건비, 재료비 모두는 "갑"이 지급한 계약금 내에 포함 된 것으로 한다.</div>
+  <div class="clause-item">② 계약금은 계약 종료 전 지급한다.</div>
+  <div class="clause-item">③ "갑"은 아래와 같은 일정에 따라 계약금을 지급한다.</div>
+  <table class="pay-table">
+    <thead><tr><th>항목</th><th>구분</th><th>총금액</th><th>지급예정일/비고</th></tr></thead>
+    <tbody>
+      ${(doc.paymentItems||[]).map(p => `<tr><td>${escapeHtml(p.category)}</td><td>${escapeHtml(p.type)}</td><td>${p.amount.toLocaleString()}</td><td>${escapeHtml(p.note)}</td></tr>`).join('')}
+      <tr><td colspan="2" style="font-weight:700; background:#f2f2f2;">합계 (VAT별도)</td><td colspan="2" style="font-weight:700; background:#f2f2f2;">${totalAmount.toLocaleString()}원</td></tr>
+    </tbody>
+  </table>
+  <div class="clause-item">④ 작업 진행율의 기준은 "갑"이 일방적으로 정할 수 없으며 반드시 "을"과 적절한 기준을 비용지급일 1일 전에 상호협의 하에 결정한다.</div>
+
+  <div class="clause-title">제4조 [협약기간]</div>
+  <div>협약기간은 ${escapeHtml(doc.agreementPeriodText)}로 한다.</div>
+
+  <div class="clause-title">제5조 [개발에 관한 조항]</div>
+  <div class="clause-item">① "갑"과 "을"은 신의성실로 상호 협조하기로 한다.</div>
+  <div class="clause-item">② "갑"의 일방적인 개발 중지 및 계약해지에 따라 "을"은 해당 작업의 진행수준에 맞는 비용을 청구 할 수 있다.</div>
+  <div class="clause-item">③ 차후에 본 용역 계약의 결과물과 유사한 작업을 진행하는 경우, "갑"과 "을"은 서로에게 최우선적으로 기회를 제공하고 협의하여 각자의 권익을 배려한다.</div>
+
+  <div class="clause-title">제6조 [계약서의 작성 및 보관]</div>
+  <div class="clause-item">① "갑"과 "을"은 이상과 같이 계약을 체결하고, 계약의 성립을 증명하기 위하여 계약서 2부를 작성하여, 서명 또는 기명날인 후 각각 1부씩 보관하기로 한다.</div>
+  <div class="clause-item">② 본 계약은 체결일로부터 시행한다.</div>
+
+  <div class="sign-date">${formatDotDate(doc.contractDate)}</div>
+
+  <div class="sign-block">
+    <div class="sign-col">
+      <div>${escapeHtml(company.name||'㈜공공플랜')}</div>
+      <div>${escapeHtml(company.address||'')}</div>
+      <div>사업자등록번호 : ${escapeHtml(company.bizNumber||'')}</div>
+      <div class="seal-line">대표자 ${escapeHtml(company.ceo||'')}${company.hasSeal ? `<img class="seal" id="scCeoSeal">` : ' (인)'}</div>
+    </div>
+    <div class="sign-col">
+      <div>${escapeHtml(doc.counterpartyName)}</div>
+      <div>${escapeHtml(doc.counterpartyAddress)}</div>
+      <div>사업자등록번호 : ${escapeHtml(doc.counterpartyBizNumber)}</div>
+      <div class="seal-line">대표자 ${escapeHtml(doc.counterpartyRepName)} (인)</div>
+    </div>
+  </div>
+</body></html>`);
+  win.document.close();
+
+  Promise.all([
+    company.hasSeal ? fetchFileBlob('_company', 'seal') : Promise.resolve(null)
+  ]).then(([ceoSeal]) => {
+    const imgLoadPromises = [];
+    if(ceoSeal){
+      const img = win.document.getElementById('scCeoSeal');
+      if(img){ imgLoadPromises.push(waitImgLoad(img)); img.src = ceoSeal.dataUrl; }
+    }
+    Promise.all(imgLoadPromises).then(() => win.print());
+  });
+}
+
 // ---- 직원 정보 관리 (마스터 데이터) ----
 function openBulkEmploy(){
   document.getElementById('overlay-bulk-employ').classList.add('open');
@@ -7730,6 +9118,13 @@ function formatKoreanDate(dateStr){
   if(!dateStr) return '____년 __월 __일';
   const d = new Date(dateStr + 'T00:00:00');
   return `${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일`;
+}
+
+// 보탬e(품의서/지출결의서) 전용 - "2025. 12. 03." 점 형식
+function formatDotDate(dateStr){
+  if(!dateStr) return '____. __. __.';
+  const d = new Date(dateStr + 'T00:00:00');
+  return `${d.getFullYear()}. ${String(d.getMonth()+1).padStart(2,'0')}. ${String(d.getDate()).padStart(2,'0')}.`;
 }
 
 function requestPrint(item){
@@ -8108,7 +9503,7 @@ function render(){
   if(currentTab==='leave' || currentTab==='comp' || currentTab==='workGP' || currentTab==='workHM' || currentTab==='unitcost') return;
   const search = document.getElementById('searchInput').value.toLowerCase();
   const sort = document.getElementById('sortSelect').value;
-  let items = data[currentTab].slice();
+  let items = currentTab==='expenseChecklist' ? data.expenseProposals.slice() : data[currentTab].slice();
 
   items = items.filter(d=>{
     const chipMatch = activeChip==='전체' || (currentTab==='contract' ? (d.categories||[]).includes(activeChip) : currentTab==='docs' ? expiryStatus(d)===activeChip : currentTab==='employ' ? d.name===activeChip : currentTab==='official' ? d.recipient===activeChip : currentTab==='receipts' ? d.level===activeChip : (d.kind===activeChip || d.issuer===activeChip));
@@ -8121,6 +9516,12 @@ function render(){
     if(currentTab==='reviewNotices') hay = [d.docNo,d.title,d.recipient,d.intro,...(d.candidates||[]).map(c=>c.name)].join(' ');
     if(currentTab==='meetingMinutes') hay = [d.title,d.writerName,d.location,d.agenda,d.contentSummary].join(' ');
     if(currentTab==='career') hay = [d.name,d.duty].join(' ');
+    if(currentTab==='expenseProposals') hay = [d.docNo,d.projectName,d.totalDescription].join(' ');
+    if(currentTab==='expenseChecklist') hay = [d.projectName,d.totalDescription].join(' ');
+    if(currentTab==='vendors') hay = [d.name,d.repName,d.bizNumber].join(' ');
+    if(currentTab==='bizProjects') hay = [d.name].join(' ');
+    if(currentTab==='serviceContracts') hay = [d.title,d.counterpartyName].join(' ');
+    if(currentTab==='expenseResolutions') hay = [d.docNo,d.subProject,d.payeeName].join(' ');
     if(currentTab==='employees') hay = [d.name,d.position,d.code,d.team].join(' ');
     if(currentTab==='buildings') hay = [d.name,d.address,d.area,d.notes].join(' ');
     if(currentTab==='tenants') hay = [d.companyName,d.repName,d.address,d.contact].join(' ');
@@ -8207,6 +9608,18 @@ function render(){
     }
     if(currentTab==='career'){
       if(sort==='name') return (a.name||'').localeCompare(b.name||'','ko');
+    }
+    if(currentTab==='expenseProposals' || currentTab==='expenseChecklist'){
+      if(sort==='name') return (a.projectName||'').localeCompare(b.projectName||'','ko');
+    }
+    if(currentTab==='bizProjects' || currentTab==='vendors'){
+      if(sort==='name') return (a.name||'').localeCompare(b.name||'','ko');
+    }
+    if(currentTab==='serviceContracts'){
+      if(sort==='name') return (a.title||'').localeCompare(b.title||'','ko');
+    }
+    if(currentTab==='expenseResolutions'){
+      if(sort==='name') return (a.subProject||'').localeCompare(b.subProject||'','ko');
     }
     if(currentTab==='employees'){
       if(sort==='name') return (a.name||'').localeCompare(b.name||'','ko');
@@ -8372,10 +9785,146 @@ function render(){
           <button class="icon-btn del" onclick="deleteItem('meetingMinutes','${d.id}')">삭제</button>` : ''}
         </div>
       </div>`).join('') + '</div>';
-  } else if(currentTab==='career'){
+  } else if(currentTab==='expenseProposals'){
     content.innerHTML = '<div class="grid">' + items.map(d => `
       <div class="card">
-        <div class="meta">${escapeHtml(d.issueDate || '-')}</div>
+        <div class="meta">${escapeHtml(d.docNo || '-')} · ${escapeHtml(d.issueDate || '-')}</div>
+        <h3>${escapeHtml(d.totalDescription || d.projectName)}</h3>
+        <div class="meta">사업명 : ${escapeHtml(d.projectName)}</div>
+        <div class="meta">${escapeHtml(d.fundSource||'-')} · 지출추정금액 ₩${(d.amount||0).toLocaleString()}</div>
+        ${d.attachmentFile ? `<div class="file-block"><div class="file-label">첨부파일</div><div class="file-link" onclick="downloadFile('${d.id}','main')" style="cursor:pointer;">⬇ ${escapeHtml(d.attachmentFile.name)}</div></div>` : ''}
+        <div class="card-actions">
+          <button class="icon-btn" onclick='printExpenseProposal(${JSON.stringify(d).replace(/'/g,"&#39;")})'>🖨 재발급/인쇄</button>
+          ${!isRestricted() ? `<button class="icon-btn" onclick='openModal(${JSON.stringify(d).replace(/'/g,"&#39;")})'>수정</button>
+          <button class="icon-btn del" onclick="deleteItem('expenseProposals','${d.id}')">삭제</button>` : ''}
+        </div>
+      </div>`).join('') + '</div>';
+  } else if(currentTab==='expenseChecklist'){
+    const filteredChecklist = checklistProjectFilter ? items.filter(p => p.bizProjectId === checklistProjectFilter) : items;
+    content.innerHTML = '<div class="grid">' + `
+      <div class="card" style="grid-column:1 / -1;">
+        <div class="field" style="max-width:320px;">
+          <label>사업 선택</label>
+          <select onchange="checklistProjectFilter=this.value; render();">
+            <option value="">전체</option>
+            ${data.bizProjects.map(p => `<option value="${p.id}" ${checklistProjectFilter===p.id?'selected':''}>${escapeHtml(p.name)}</option>`).join('')}
+          </select>
+        </div>
+        <div style="overflow-x:auto;">
+        <table style="border-collapse:collapse; font-size:12.5px; width:100%; min-width:600px;">
+          <thead><tr>
+            <th style="text-align:left; border-bottom:1px solid var(--line); padding:8px 12px;">제목</th>
+            <th style="border-bottom:1px solid var(--line); padding:8px 12px;">품의서</th>
+            <th style="border-bottom:1px solid var(--line); padding:8px 12px;">결의서</th>
+            <th style="border-bottom:1px solid var(--line); padding:8px 12px;">계약서 (200만원 이상만)</th>
+          </tr></thead>
+          <tbody>
+            ${filteredChecklist.map(p => {
+              const hasResolution = data.expenseResolutions.some(r => r.proposalId === p.id);
+              const needsContract = (p.amount||0) >= 2000000;
+              const hasContract = data.serviceContracts.some(c => c.proposalId === p.id);
+              return `<tr>
+                <td style="padding:8px 12px;">${escapeHtml(p.totalDescription || p.projectName)}</td>
+                <td style="text-align:center; padding:8px 12px;">O</td>
+                <td style="text-align:center; padding:8px 12px; color:${hasResolution?'inherit':'var(--danger)'};">${hasResolution?'O':'X'}</td>
+                <td style="text-align:center; padding:8px 12px; color:${(needsContract && !hasContract)?'var(--danger)':'inherit'};">${needsContract ? (hasContract?'O':'X') : '필요 없음'}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+        </div>
+      </div>` + '</div>';
+  } else if(currentTab==='vendors'){
+    content.innerHTML = '<div class="grid">' + items.map(d => `
+      <div class="card">
+        <h3>${escapeHtml(d.name)}</h3>
+        <div class="meta">대표자 : ${escapeHtml(d.repName || '-')}</div>
+        <div class="meta">사업자등록번호 : ${escapeHtml(d.bizNumber || '-')}</div>
+        ${d.address ? `<div class="meta">${escapeHtml(d.address)}</div>` : ''}
+        ${d.hasBizCert ? `<div class="file-block"><div class="file-label">사업자등록증</div><div class="file-link" onclick="downloadFile('${d.id}','bizCert')" style="cursor:pointer;">⬇ 다운로드</div></div>` : ''}
+        ${d.hasBankCopy ? `<div class="file-block"><div class="file-label">통장사본</div><div class="file-link" onclick="downloadFile('${d.id}','bankCopy')" style="cursor:pointer;">⬇ 다운로드</div></div>` : ''}
+        <div class="card-actions">
+          ${!isRestricted() ? `<button class="icon-btn" onclick='openModal(${JSON.stringify(d).replace(/'/g,"&#39;")})'>수정</button>
+          <button class="icon-btn del" onclick="deleteItem('vendors','${d.id}')">삭제</button>` : ''}
+        </div>
+      </div>`).join('') + '</div>';
+  } else if(currentTab==='bizProjects'){
+    content.innerHTML = '<div class="grid">' + items.map(d => {
+      const spent = calcBizProjectSpending(d.id);
+      const totalBudget = (d.budgetItems||[]).reduce((s,b)=>s+(b.amount||0),0);
+      const totalSpent = Object.values(spent).reduce((s,v)=>s+v,0);
+      const extraCats = Object.keys(spent).filter(cat => !(d.budgetItems||[]).some(b=>b.category===cat));
+      const allCats = [...(d.budgetItems||[]).map(b=>b.category), ...extraCats];
+      const budgetByCat = {};
+      (d.budgetItems||[]).forEach(b => budgetByCat[b.category] = b.amount);
+      return `
+      <div class="card" style="grid-column:1 / -1;">
+        <h3>${escapeHtml(d.name)}</h3>
+        <div class="meta">${escapeHtml(d.periodStart||'')} ~ ${escapeHtml(d.periodEnd||'')}</div>
+        <div class="meta">총 예산 ₩${totalBudget.toLocaleString()} · 총 집행 ₩${totalSpent.toLocaleString()} (${totalBudget>0?Math.round(totalSpent/totalBudget*100):0}%)</div>
+        <div style="overflow-x:auto;">
+        <table style="border-collapse:collapse; font-size:12.5px; margin:8px 0; min-width:100%;">
+          <thead><tr>
+            <th style="text-align:left; border-bottom:1px solid var(--line); padding:6px 10px; white-space:nowrap;"></th>
+            ${allCats.map(cat => `<th style="text-align:right; border-bottom:1px solid var(--line); padding:6px 10px; white-space:nowrap;">${escapeHtml(cat)}${extraCats.includes(cat) ? ' <span style="color:var(--mist); font-size:10.5px;">(예산없음)</span>' : ''}</th>`).join('')}
+          </tr></thead>
+          <tbody>
+            <tr><td style="padding:6px 10px; font-weight:700; white-space:nowrap;">예산</td>${allCats.map(cat => `<td style="text-align:right; padding:6px 10px; white-space:nowrap;">${budgetByCat[cat]!=null ? '₩'+budgetByCat[cat].toLocaleString() : '-'}</td>`).join('')}</tr>
+            <tr><td style="padding:6px 10px; font-weight:700; white-space:nowrap;">집행</td>${allCats.map(cat => `<td style="text-align:right; padding:6px 10px; white-space:nowrap;">₩${(spent[cat]||0).toLocaleString()}</td>`).join('')}</tr>
+            <tr><td style="padding:6px 10px; font-weight:700; white-space:nowrap;">잔액</td>${allCats.map(cat => {
+              if(budgetByCat[cat]==null) return `<td style="text-align:right; padding:6px 10px; white-space:nowrap;">-</td>`;
+              const remain = budgetByCat[cat] - (spent[cat]||0);
+              return `<td style="text-align:right; padding:6px 10px; white-space:nowrap; color:${remain<0?'var(--danger)':'inherit'};">₩${remain.toLocaleString()}</td>`;
+            }).join('')}</tr>
+          </tbody>
+        </table>
+        </div>
+        ${(() => {
+          const linkedProposals = data.expenseProposals.filter(p => p.bizProjectId === d.id);
+          if(linkedProposals.length === 0) return '';
+          return `<div class="meta" style="margin-top:4px;"><b>연결된 품의서</b> : ${linkedProposals.map(p => escapeHtml(p.totalDescription || p.projectName)).join(', ')}</div>`;
+        })()}
+        <div class="card-actions">
+          ${!isRestricted() ? `<button class="icon-btn" onclick='openModal(${JSON.stringify(d).replace(/'/g,"&#39;")})'>수정</button>
+          <button class="icon-btn del" onclick="deleteItem('bizProjects','${d.id}')">삭제</button>` : ''}
+        </div>
+      </div>`;
+    }).join('') + '</div>';
+  } else if(currentTab==='serviceContracts'){
+    content.innerHTML = '<div class="grid">' + items.map(d => {
+      const total = (d.paymentItems||[]).reduce((s,p)=>s+(p.amount||0),0);
+      return `
+      <div class="card">
+        <div class="meta">${escapeHtml(d.contractDate || '-')}</div>
+        <h3>${escapeHtml(d.title)}</h3>
+        <div class="meta">을 : ${escapeHtml(d.counterpartyName || '-')}</div>
+        <div class="meta">계약금액 ₩${total.toLocaleString()} (VAT별도)</div>
+        <div class="card-actions">
+          <button class="icon-btn" onclick='printServiceContract(${JSON.stringify(d).replace(/'/g,"&#39;")})'>🖨 재발급/인쇄</button>
+          ${!isRestricted() ? `<button class="icon-btn" onclick='openModal(${JSON.stringify(d).replace(/'/g,"&#39;")})'>수정</button>
+          <button class="icon-btn del" onclick="deleteItem('serviceContracts','${d.id}')">삭제</button>` : ''}
+        </div>
+      </div>`;
+    }).join('') + '</div>';
+  } else if(currentTab==='expenseResolutions'){
+    content.innerHTML = '<div class="grid">' + items.map(d => `
+      <div class="card">
+        <div class="meta">${escapeHtml(d.docNo || '-')} · ${escapeHtml(d.issueDate || '-')}</div>
+        <h3>${escapeHtml(d.totalDescription || d.subProject)}</h3>
+        <div class="meta">세부사업 : ${escapeHtml(d.subProject)}</div>
+        <div class="meta">${escapeHtml(d.fundSource||'-')} · 지출금액 ₩${(d.amount||0).toLocaleString()}</div>
+        <div class="meta">채주: ${escapeHtml(d.payeeName || '-')}</div>
+        ${d.attachmentFile ? `<div class="file-block"><div class="file-label">첨부파일</div><div class="file-link" onclick="downloadFile('${d.id}','main')" style="cursor:pointer;">⬇ ${escapeHtml(d.attachmentFile.name)}</div></div>` : ''}
+        ${(d.evidenceItems||[]).filter(ev=>ev.hasFile).map((ev,i) => `<div class="file-block"><div class="file-label">${escapeHtml(ev.description||'증빙자료')}</div><div class="file-link" onclick="downloadFile('${d.id}','evidence${(d.evidenceItems||[]).indexOf(ev)}')" style="cursor:pointer;">⬇ ${escapeHtml(ev.fileName||'')}</div></div>`).join('')}
+        <div class="card-actions">
+          <button class="icon-btn" onclick='printExpenseResolution(${JSON.stringify(d).replace(/'/g,"&#39;")})'>🖨 재발급/인쇄</button>
+          ${!isRestricted() ? `<button class="icon-btn" onclick='openModal(${JSON.stringify(d).replace(/'/g,"&#39;")})'>수정</button>
+          <button class="icon-btn del" onclick="deleteItem('expenseResolutions','${d.id}')">삭제</button>` : ''}
+        </div>
+      </div>`).join('') + '</div>';
+  } else if(currentTab==='career'){
+    content.innerHTML = '<div class="grid">' + items.map(d => `
+      <div class="card">        <div class="meta">${escapeHtml(d.issueDate || '-')}</div>
         <h3>${escapeHtml(d.name)}</h3>
         <div class="meta">${escapeHtml(d.position || '-')}${d.duty ? ' · '+escapeHtml(d.duty) : ''}</div>
         <div class="notes">${calcCareerPeriodText(d.hireDate, d.endDate)}</div>
@@ -8640,6 +10189,12 @@ function renderSortOptions(){
   if(currentTab==='reviewNotices') opts = [['recent','최근발급순'],['name','제목순'],['recipient','수신처순']];
   if(currentTab==='meetingMinutes') opts = [['recent','최근발급순'],['name','제목순'],['date','회의일순']];
   if(currentTab==='career') opts = [['recent','최근발급순'],['name','성명순']];
+  if(currentTab==='expenseProposals') opts = [['recent','최근발급순'],['name','사업명순']];
+  if(currentTab==='expenseChecklist') opts = [['recent','최근발급순'],['name','사업명순']];
+  if(currentTab==='vendors') opts = [['recent','최근수정순'],['name','상호명순']];
+  if(currentTab==='bizProjects') opts = [['recent','최근수정순'],['name','사업명순']];
+  if(currentTab==='serviceContracts') opts = [['recent','최근발급순'],['name','제목순']];
+  if(currentTab==='expenseResolutions') opts = [['recent','최근발급순'],['name','세부사업순']];
   if(currentTab==='employees') opts = [['recent','최근수정순'],['name','이름순']];
   if(currentTab==='buildings') opts = [['recent','최근수정순'],['name','이름순']];
   if(currentTab==='tenants') opts = [['recent','최근수정순'],['name','회사명순']];
