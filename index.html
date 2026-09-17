@@ -652,6 +652,8 @@
         <button type="button" class="icon-btn del" onclick="clearFileInput('vd_bizCertFile')">✕ 선택취소</button>
       </div>
       <div class="filerow" id="vd_bizCert_current"></div>
+      <div id="vd_bizCertPasteZone" tabindex="0" style="margin-top:6px; border:1px dashed var(--line); border-radius:4px; padding:8px 10px; font-size:12px; color:var(--mist); cursor:text;">여기 클릭하고 이미지 붙여넣기(Ctrl+V) 가능</div>
+      <div id="vd_bizCertPasteZone_status" style="margin-top:4px; font-size:12px;"></div>
     </div>
     <div class="field">
       <label>통장사본 파일</label>
@@ -660,6 +662,8 @@
         <button type="button" class="icon-btn del" onclick="clearFileInput('vd_bankCopyFile')">✕ 선택취소</button>
       </div>
       <div class="filerow" id="vd_bankCopy_current"></div>
+      <div id="vd_bankCopyPasteZone" tabindex="0" style="margin-top:6px; border:1px dashed var(--line); border-radius:4px; padding:8px 10px; font-size:12px; color:var(--mist); cursor:text;">여기 클릭하고 이미지 붙여넣기(Ctrl+V) 가능</div>
+      <div id="vd_bankCopyPasteZone_status" style="margin-top:4px; font-size:12px;"></div>
     </div>
 
     <div class="modal-actions">
@@ -730,6 +734,8 @@
         <button type="button" class="icon-btn del" onclick="clearFileInput('ep_attachmentFile')">✕ 선택취소</button>
       </div>
       <div class="filerow" id="ep_attachment_current"></div>
+      <div id="ep_pasteZone" tabindex="0" style="margin-top:6px; border:1px dashed var(--line); border-radius:4px; padding:8px 10px; font-size:12px; color:var(--mist); cursor:text;">여기 클릭하고 이미지 붙여넣기(Ctrl+V) 가능</div>
+      <div id="ep_pasteZone_status" style="margin-top:4px; font-size:12px;"></div>
     </div>
     <div class="field"><label>담당자</label>
       <select id="ep_managerId"></select>
@@ -790,7 +796,8 @@
     <div class="field">
       <label>증빙 사진 (여러 장 선택 가능, 자동으로 용량이 줄어들어요, 인쇄 시 한 페이지에 4장씩)</label>
       <input type="file" id="er_evidencePhotoFiles" accept="image/*" multiple onchange="addEvidencePhotos(this)" style="margin-bottom:8px;">
-      <div id="er_evidencePhotoBody" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
+      <div id="er_evidencePhotoBody" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:6px;"></div>
+      <div id="er_evidencePhotoPasteZone" tabindex="0" style="border:1px dashed var(--line); border-radius:4px; padding:8px 10px; font-size:12px; color:var(--mist); cursor:text;">여기 클릭하고 이미지 붙여넣기(Ctrl+V) 가능 (자동으로 목록에 추가돼요)</div>
     </div>
     <div class="field">
       <label>첨부파일 (선택)</label>
@@ -799,6 +806,8 @@
         <button type="button" class="icon-btn del" onclick="clearFileInput('er_attachmentFile')">✕ 선택취소</button>
       </div>
       <div class="filerow" id="er_attachment_current"></div>
+      <div id="er_pasteZone" tabindex="0" style="margin-top:6px; border:1px dashed var(--line); border-radius:4px; padding:8px 10px; font-size:12px; color:var(--mist); cursor:text;">여기 클릭하고 이미지 붙여넣기(Ctrl+V) 가능</div>
+      <div id="er_pasteZone_status" style="margin-top:4px; font-size:12px;"></div>
     </div>
     <div class="field"><label>담당자</label>
       <select id="er_managerId"></select>
@@ -3598,6 +3607,12 @@ function openModal(doc){
     document.getElementById('vd_bankCopyFile').value = '';
     document.getElementById('vd_bizCert_current').innerHTML = (doc && doc.hasBizCert) ? `등록됨 <button type="button" onclick="removeVendorFile('${doc.id}','bizCert')" class="icon-btn del" style="margin-left:6px;">🗑 삭제</button> <a href="#" onclick="downloadFile('${doc.id}','bizCert'); return false;" style="margin-left:6px;">⬇ 다운로드</a>` : '등록된 파일 없음';
     document.getElementById('vd_bankCopy_current').innerHTML = (doc && doc.hasBankCopy) ? `등록됨 <button type="button" onclick="removeVendorFile('${doc.id}','bankCopy')" class="icon-btn del" style="margin-left:6px;">🗑 삭제</button> <a href="#" onclick="downloadFile('${doc.id}','bankCopy'); return false;" style="margin-left:6px;">⬇ 다운로드</a>` : '등록된 파일 없음';
+    pastedFiles.vd_bizCert = null;
+    pastedFiles.vd_bankCopy = null;
+    document.getElementById('vd_bizCertPasteZone_status').innerHTML = '';
+    document.getElementById('vd_bankCopyPasteZone_status').innerHTML = '';
+    setupPasteZone('vd_bizCertPasteZone', 'vd_bizCert');
+    setupPasteZone('vd_bankCopyPasteZone', 'vd_bankCopy');
   } else if(tab==='bizProjects'){
     document.getElementById('modalTitle-bizProjects').textContent = doc ? '사업 수정' : '사업 작성';
     document.getElementById('bp_editId').value = doc ? doc.id : '';
@@ -3645,6 +3660,9 @@ function openModal(doc){
     document.getElementById('ep_attachmentNote').value = doc ? doc.attachmentNote : '';
     document.getElementById('ep_attachmentFile').value = '';
     document.getElementById('ep_attachment_current').innerHTML = (doc && doc.attachmentFile) ? `현재 파일: ${escapeHtml(doc.attachmentFile.name)} <a href="#" onclick="downloadFile('${doc.id}', 'main'); return false;" style="margin-left:6px;">⬇ 다운로드</a>` : '';
+    pastedFiles.ep_attachment = null;
+    document.getElementById('ep_pasteZone_status').innerHTML = '';
+    setupPasteZone('ep_pasteZone', 'ep_attachment');
     document.getElementById('ep_managerId').value = doc ? doc.managerId : '';
     document.getElementById('ep_issueDate').value = doc ? doc.issueDate : new Date().toISOString().slice(0,10);
   } else if(tab==='expenseResolutions'){
@@ -3673,6 +3691,10 @@ function openModal(doc){
     renderEvidencePhotos();
     document.getElementById('er_attachmentFile').value = '';
     document.getElementById('er_attachment_current').innerHTML = (doc && doc.attachmentFile) ? `현재 파일: ${escapeHtml(doc.attachmentFile.name)} <a href="#" onclick="downloadFile('${doc.id}', 'main'); return false;" style="margin-left:6px;">⬇ 다운로드</a>` : '';
+    pastedFiles.er_attachment = null;
+    document.getElementById('er_pasteZone_status').innerHTML = '';
+    setupPasteZone('er_pasteZone', 'er_attachment');
+    setupEvidencePhotoPasteZone();
     document.getElementById('er_managerId').value = doc ? doc.managerId : '';
     document.getElementById('er_issueDate').value = doc ? doc.issueDate : new Date().toISOString().slice(0,10);
   } else if(tab==='buildings'){
@@ -4118,6 +4140,31 @@ async function printCareerCertificate(item){
 function closeModal(tab){ document.getElementById('overlay-'+tab).classList.remove('open'); }
 
 // 이미지 파일을 자동으로 리사이즈/재압축해서 용량을 줄임 (사진이 아니면 원본 그대로)
+// 클립보드에 복사된 이미지를 붙여넣기(Ctrl+V)로 바로 받을 수 있게 하는 공용 유틸
+// 단일 파일 첨부칸(품의서 첨부파일, 업체 서류 등)에서 사용 - pastedFiles[targetKey]에 저장해뒀다가 저장 시 우선 사용
+let pastedFiles = {};
+
+function setupPasteZone(zoneId, targetKey){
+  const el = document.getElementById(zoneId);
+  if(!el || el._pasteSetup) return;
+  el._pasteSetup = true;
+  el.addEventListener('paste', async (e) => {
+    const items = (e.clipboardData || e.originalEvent?.clipboardData)?.items;
+    if(!items) return;
+    for(const item of items){
+      if(item.type && item.type.startsWith('image/')){
+        const file = item.getAsFile();
+        if(!file) continue;
+        const compressed = await compressImageFile(file);
+        if(!compressed) continue;
+        pastedFiles[targetKey] = compressed;
+        const statusEl = document.getElementById(zoneId + '_status');
+        if(statusEl) statusEl.innerHTML = `📎 붙여넣은 이미지: ${escapeHtml(compressed.name)} <img src="${compressed.dataUrl}" style="height:40px; vertical-align:middle; margin-left:6px; border:1px solid var(--line); border-radius:4px;">`;
+      }
+    }
+  });
+}
+
 function compressImageFile(file, maxDimension = 1600, quality = 0.75){
   return new Promise((resolve) => {
     if(!file || !file.type || !file.type.startsWith('image/') || file.type === 'image/gif'){
@@ -4485,8 +4532,8 @@ async function saveVendor(){
   btn.disabled = true; btn.textContent = '저장 중...';
   const id = document.getElementById('vd_editId').value || ('vd-'+Date.now());
   const existing = data.vendors.find(d=>d.id===id) || {};
-  const bizCertFile = await readFileAsData(document.getElementById('vd_bizCertFile'));
-  const bankCopyFile = await readFileAsData(document.getElementById('vd_bankCopyFile'));
+  const bizCertFile = pastedFiles.vd_bizCert || await readFileAsData(document.getElementById('vd_bizCertFile'));
+  const bankCopyFile = pastedFiles.vd_bankCopy || await readFileAsData(document.getElementById('vd_bankCopyFile'));
   let hasBizCert = existing.hasBizCert, hasBankCopy = existing.hasBankCopy;
   if(bizCertFile){
     const ok = await saveFileBlob(id, 'bizCert', bizCertFile);
@@ -4725,10 +4772,32 @@ function renderEvidenceRows(){
     <div style="display:flex; gap:6px; align-items:center;">
       <input placeholder="증빙자료명 (예: 급여대장)" value="${escapeHtml(ev.description||'')}" oninput="evidenceItemsState[${i}].description=this.value;" style="flex:2;">
       <input type="file" id="er_evidenceFile${i}" style="flex:2;">
+      <span id="er_evidencePasteZone${i}" tabindex="0" title="여기 클릭 후 Ctrl+V로 이미지 붙여넣기" style="cursor:text; padding:6px 8px; border:1px dashed var(--line); border-radius:3px; font-size:11px; color:var(--mist); white-space:nowrap;">📋 붙여넣기</span>
       ${ev.hasFile ? `<span style="font-size:12px; color:var(--mist); white-space:nowrap;">📎 ${escapeHtml(ev.fileName||'')}</span>` : ''}
+      ${ev._pastedFile ? `<span style="font-size:12px; color:var(--mist); white-space:nowrap;">📎 붙여넣음</span>` : ''}
       <button type="button" class="icon-btn del" onclick="removeEvidenceRow(${i})">삭제</button>
     </div>
   `).join('');
+  evidenceItemsState.forEach((ev, i) => setupEvidenceItemPasteZone(i));
+}
+
+function setupEvidenceItemPasteZone(i){
+  const el = document.getElementById(`er_evidencePasteZone${i}`);
+  if(!el) return;
+  el.addEventListener('paste', async (e) => {
+    const items = (e.clipboardData || e.originalEvent?.clipboardData)?.items;
+    if(!items) return;
+    for(const item of items){
+      if(item.type && item.type.startsWith('image/')){
+        const file = item.getAsFile();
+        if(!file) continue;
+        const compressed = await compressImageFile(file);
+        if(!compressed) continue;
+        evidenceItemsState[i]._pastedFile = compressed;
+        renderEvidenceRows();
+      }
+    }
+  });
 }
 
 function addEvidenceRow(){
@@ -4747,6 +4816,26 @@ function addEvidencePhotos(inputEl){
     });
     renderEvidencePhotos();
     inputEl.value = '';
+  });
+}
+
+function setupEvidencePhotoPasteZone(){
+  const el = document.getElementById('er_evidencePhotoPasteZone');
+  if(!el || el._pasteSetup) return;
+  el._pasteSetup = true;
+  el.addEventListener('paste', async (e) => {
+    const items = (e.clipboardData || e.originalEvent?.clipboardData)?.items;
+    if(!items) return;
+    for(const item of items){
+      if(item.type && item.type.startsWith('image/')){
+        const file = item.getAsFile();
+        if(!file) continue;
+        const compressed = await compressImageFile(file);
+        if(!compressed) continue;
+        evidencePhotosState.push({ slotId: 'evp'+Date.now()+Math.random().toString(36).slice(2,6), fileName:compressed.name, fileType:compressed.type, dataUrl:compressed.dataUrl, description:'', isNew:true });
+        renderEvidencePhotos();
+      }
+    }
   });
 }
 
@@ -4859,7 +4948,7 @@ async function saveExpenseProposal(){
   const id = document.getElementById('ep_editId').value || ('ep-'+Date.now());
   const existing = data.expenseProposals.find(d=>d.id===id) || {};
   const items = collectExpenseItems('ep');
-  const newFile = await readFileAsData(document.getElementById('ep_attachmentFile'));
+  const newFile = pastedFiles.ep_attachment || await readFileAsData(document.getElementById('ep_attachmentFile'));
   let fileMeta = existing.attachmentFile || null;
   if(newFile){
     const ok = await saveFileBlob(id, 'main', newFile);
@@ -4903,7 +4992,7 @@ async function saveExpenseResolution(){
   const id = document.getElementById('er_editId').value || ('er-'+Date.now());
   const existing = data.expenseResolutions.find(d=>d.id===id) || {};
   const items = collectExpenseItems('er');
-  const newFile = await readFileAsData(document.getElementById('er_attachmentFile'));
+  const newFile = pastedFiles.er_attachment || await readFileAsData(document.getElementById('er_attachmentFile'));
   let fileMeta = existing.attachmentFile || null;
   if(newFile){
     const ok = await saveFileBlob(id, 'main', newFile);
@@ -4914,7 +5003,7 @@ async function saveExpenseResolution(){
   for(let i=0; i<evidenceItemsState.length; i++){
     const ev = evidenceItemsState[i];
     if(!ev.description.trim() && !ev.hasFile) continue;
-    const evFile = await readFileAsData(document.getElementById(`er_evidenceFile${i}`));
+    const evFile = ev._pastedFile || await readFileAsData(document.getElementById(`er_evidenceFile${i}`));
     let evHasFile = ev.hasFile, evFileName = ev.fileName, evFileType = ev.fileType;
     if(evFile){
       const ok = await saveFileBlob(id, `evidence${i}`, evFile);
